@@ -57,6 +57,10 @@ seconds of data, so it never flickers into existence from nothing.
   testing, exporting a Windows build
 - [`TESTING_GUIDE.md`](TESTING_GUIDE.md) — a manual verification checklist
   for every MVP feature
+- [`GAMEPLAY_SYSTEMS.md`](GAMEPLAY_SYSTEMS.md) — how the round/match/
+  scoring/spawn systems are designed, with per-system testing steps
+- [`STABILIZATION_REPORT.md`](STABILIZATION_REPORT.md) — bugs found and
+  fixed in the reliability pass, remaining known issues, and recommendations
 - [`BEGINNER_GODOT_GUIDE.md`](BEGINNER_GODOT_GUIDE.md) — a from-zero
   walkthrough for someone who has never opened Godot
 
