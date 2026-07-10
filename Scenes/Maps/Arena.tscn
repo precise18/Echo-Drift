@@ -1,0 +1,335 @@
+[gd_scene load_steps=24 format=3]
+
+[ext_resource type="Material" path="res://Materials/ground_material.tres" id="1_ground"]
+[ext_resource type="Material" path="res://Materials/wall_material.tres" id="2_wall"]
+[ext_resource type="Material" path="res://Materials/tree_trunk_material.tres" id="3_trunk"]
+[ext_resource type="Material" path="res://Materials/tree_leaves_material.tres" id="4_leaves"]
+[ext_resource type="Material" path="res://Materials/rock_material.tres" id="5_rock"]
+[ext_resource type="Material" path="res://Materials/cabin_material.tres" id="6_cabin"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_1"]
+sky_top_color = Color(0.35, 0.6, 0.9, 1)
+sky_horizon_color = Color(0.75, 0.85, 0.95, 1)
+ground_bottom_color = Color(0.3, 0.28, 0.25, 1)
+ground_horizon_color = Color(0.75, 0.85, 0.95, 1)
+
+[sub_resource type="Sky" id="Sky_1"]
+sky_material = SubResource("ProceduralSkyMaterial_1")
+
+[sub_resource type="Environment" id="Environment_1"]
+background_mode = 2
+sky = SubResource("Sky_1")
+ambient_light_source = 3
+ambient_light_energy = 1.0
+tonemap_mode = 2
+glow_enabled = false
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_ground"]
+size = Vector3(30, 1, 30)
+
+[sub_resource type="BoxMesh" id="BoxMesh_ground"]
+size = Vector3(30, 1, 30)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_wall_ns"]
+size = Vector3(32, 4, 1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_wall_ns"]
+size = Vector3(32, 4, 1)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_wall_ew"]
+size = Vector3(1, 4, 32)
+
+[sub_resource type="BoxMesh" id="BoxMesh_wall_ew"]
+size = Vector3(1, 4, 32)
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_trunk"]
+radius = 0.35
+height = 3.0
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_trunk"]
+top_radius = 0.35
+bottom_radius = 0.4
+height = 3.0
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_leaves"]
+top_radius = 0.0
+bottom_radius = 1.3
+height = 2.4
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_rock"]
+radius = 0.6
+
+[sub_resource type="SphereMesh" id="SphereMesh_rock"]
+radius = 0.6
+height = 1.2
+
+[sub_resource type="SphereMesh" id="SphereMesh_bush"]
+radius = 0.55
+height = 1.1
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_cabin"]
+size = Vector3(3, 3, 3)
+
+[sub_resource type="BoxMesh" id="BoxMesh_cabin"]
+size = Vector3(3, 3, 3)
+
+[node name="Arena" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_1")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.7, -0.5, 0.5, 0, 0.7, 0.7, -0.7, -0.5, 0.5, 0, 10, 0)
+shadow_enabled = true
+directional_shadow_max_distance = 60.0
+
+[node name="Ground" type="StaticBody3D" parent="."]
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Ground"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
+shape = SubResource("BoxShape3D_ground")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Ground"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
+mesh = SubResource("BoxMesh_ground")
+surface_material_override/0 = ExtResource("1_ground")
+
+[node name="WallNorth" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, -15.5)
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="WallNorth"]
+shape = SubResource("BoxShape3D_wall_ns")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="WallNorth"]
+mesh = SubResource("BoxMesh_wall_ns")
+surface_material_override/0 = ExtResource("2_wall")
+
+[node name="WallSouth" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 15.5)
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="WallSouth"]
+shape = SubResource("BoxShape3D_wall_ns")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="WallSouth"]
+mesh = SubResource("BoxMesh_wall_ns")
+surface_material_override/0 = ExtResource("2_wall")
+
+[node name="WallEast" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 15.5, 2, 0)
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="WallEast"]
+shape = SubResource("BoxShape3D_wall_ew")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="WallEast"]
+mesh = SubResource("BoxMesh_wall_ew")
+surface_material_override/0 = ExtResource("2_wall")
+
+[node name="WallWest" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15.5, 2, 0)
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="WallWest"]
+shape = SubResource("BoxShape3D_wall_ew")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="WallWest"]
+mesh = SubResource("BoxMesh_wall_ew")
+surface_material_override/0 = ExtResource("2_wall")
+
+[node name="Obstacles" type="Node3D" parent="."]
+
+[node name="Tree1" type="Node3D" parent="Obstacles"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 0, -8)
+
+[node name="Trunk" type="StaticBody3D" parent="Obstacles/Tree1"]
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Obstacles/Tree1/Trunk"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
+shape = SubResource("CylinderShape3D_trunk")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Obstacles/Tree1/Trunk"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
+mesh = SubResource("CylinderMesh_trunk")
+surface_material_override/0 = ExtResource("3_trunk")
+
+[node name="Leaves" type="MeshInstance3D" parent="Obstacles/Tree1"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.8, 0)
+mesh = SubResource("CylinderMesh_leaves")
+surface_material_override/0 = ExtResource("4_leaves")
+
+[node name="Tree2" type="Node3D" parent="Obstacles"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 0, 8)
+
+[node name="Trunk" type="StaticBody3D" parent="Obstacles/Tree2"]
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Obstacles/Tree2/Trunk"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
+shape = SubResource("CylinderShape3D_trunk")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Obstacles/Tree2/Trunk"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
+mesh = SubResource("CylinderMesh_trunk")
+surface_material_override/0 = ExtResource("3_trunk")
+
+[node name="Leaves" type="MeshInstance3D" parent="Obstacles/Tree2"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.8, 0)
+mesh = SubResource("CylinderMesh_leaves")
+surface_material_override/0 = ExtResource("4_leaves")
+
+[node name="Tree3" type="Node3D" parent="Obstacles"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 0, 6)
+
+[node name="Trunk" type="StaticBody3D" parent="Obstacles/Tree3"]
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Obstacles/Tree3/Trunk"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
+shape = SubResource("CylinderShape3D_trunk")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Obstacles/Tree3/Trunk"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
+mesh = SubResource("CylinderMesh_trunk")
+surface_material_override/0 = ExtResource("3_trunk")
+
+[node name="Leaves" type="MeshInstance3D" parent="Obstacles/Tree3"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.8, 0)
+mesh = SubResource("CylinderMesh_leaves")
+surface_material_override/0 = ExtResource("4_leaves")
+
+[node name="Tree4" type="Node3D" parent="Obstacles"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 0, -6)
+
+[node name="Trunk" type="StaticBody3D" parent="Obstacles/Tree4"]
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Obstacles/Tree4/Trunk"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
+shape = SubResource("CylinderShape3D_trunk")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Obstacles/Tree4/Trunk"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
+mesh = SubResource("CylinderMesh_trunk")
+surface_material_override/0 = ExtResource("3_trunk")
+
+[node name="Leaves" type="MeshInstance3D" parent="Obstacles/Tree4"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.8, 0)
+mesh = SubResource("CylinderMesh_leaves")
+surface_material_override/0 = ExtResource("4_leaves")
+
+[node name="Tree5" type="Node3D" parent="Obstacles"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 11)
+
+[node name="Trunk" type="StaticBody3D" parent="Obstacles/Tree5"]
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Obstacles/Tree5/Trunk"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
+shape = SubResource("CylinderShape3D_trunk")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Obstacles/Tree5/Trunk"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
+mesh = SubResource("CylinderMesh_trunk")
+surface_material_override/0 = ExtResource("3_trunk")
+
+[node name="Leaves" type="MeshInstance3D" parent="Obstacles/Tree5"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.8, 0)
+mesh = SubResource("CylinderMesh_leaves")
+surface_material_override/0 = ExtResource("4_leaves")
+
+[node name="Rock1" type="StaticBody3D" parent="Obstacles"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 0.4, 3)
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Obstacles/Rock1"]
+shape = SubResource("SphereShape3D_rock")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Obstacles/Rock1"]
+mesh = SubResource("SphereMesh_rock")
+surface_material_override/0 = ExtResource("5_rock")
+
+[node name="Rock2" type="StaticBody3D" parent="Obstacles"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 0.4, -3)
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Obstacles/Rock2"]
+shape = SubResource("SphereShape3D_rock")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Obstacles/Rock2"]
+mesh = SubResource("SphereMesh_rock")
+surface_material_override/0 = ExtResource("5_rock")
+
+[node name="Rock3" type="StaticBody3D" parent="Obstacles"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0.4, -9)
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Obstacles/Rock3"]
+shape = SubResource("SphereShape3D_rock")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Obstacles/Rock3"]
+mesh = SubResource("SphereMesh_rock")
+surface_material_override/0 = ExtResource("5_rock")
+
+[node name="Rock4" type="StaticBody3D" parent="Obstacles"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -9, 0.4, 2)
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Obstacles/Rock4"]
+shape = SubResource("SphereShape3D_rock")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Obstacles/Rock4"]
+mesh = SubResource("SphereMesh_rock")
+surface_material_override/0 = ExtResource("5_rock")
+
+[node name="Bush1" type="MeshInstance3D" parent="Obstacles"]
+transform = Transform3D(1, 0, 0, 0, 0.6, 0, 0, 0, 1, 2, 0.33, 6)
+mesh = SubResource("SphereMesh_bush")
+surface_material_override/0 = ExtResource("4_leaves")
+
+[node name="Bush2" type="MeshInstance3D" parent="Obstacles"]
+transform = Transform3D(1, 0, 0, 0, 0.6, 0, 0, 0, 1, -3, 0.33, -7)
+mesh = SubResource("SphereMesh_bush")
+surface_material_override/0 = ExtResource("4_leaves")
+
+[node name="Bush3" type="MeshInstance3D" parent="Obstacles"]
+transform = Transform3D(1, 0, 0, 0, 0.6, 0, 0, 0, 1, 7, 0.33, -2)
+mesh = SubResource("SphereMesh_bush")
+surface_material_override/0 = ExtResource("4_leaves")
+
+[node name="Cabin" type="StaticBody3D" parent="Obstacles"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 1.5, -8)
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Obstacles/Cabin"]
+shape = SubResource("BoxShape3D_cabin")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Obstacles/Cabin"]
+mesh = SubResource("BoxMesh_cabin")
+surface_material_override/0 = ExtResource("6_cabin")
+
+[node name="SpawnPoints" type="Node3D" parent="."]
+
+[node name="HiderSpawn" type="Marker3D" parent="SpawnPoints" groups=["hider_spawn"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 1, -12)
+
+[node name="HunterSpawn" type="Marker3D" parent="SpawnPoints" groups=["hunter_spawn"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 12, 1, 12)

@@ -1,0 +1,27 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://Scripts/World/Main.gd" id="1_main"]
+[ext_resource type="PackedScene" path="res://Scenes/Maps/Arena.tscn" id="2_arena"]
+[ext_resource type="Script" path="res://Scripts/Echo/EchoRecorder.gd" id="3_recorder"]
+[ext_resource type="PackedScene" path="res://Scenes/Player/EchoGhost.tscn" id="4_ghost"]
+[ext_resource type="PackedScene" path="res://Scenes/UI/HUD.tscn" id="5_hud"]
+
+[node name="Main" type="Node3D"]
+script = ExtResource("1_main")
+
+[node name="Arena" parent="." instance=ExtResource("2_arena")]
+
+[node name="Players" type="Node3D" parent="."]
+
+[node name="MultiplayerSpawner" type="MultiplayerSpawner" parent="."]
+spawn_path = NodePath("../Players")
+_spawnable_scenes = PackedStringArray("res://Scenes/Player/Player.tscn")
+
+[node name="EchoSystem" type="Node" parent="."]
+
+[node name="EchoRecorder" type="Node" parent="EchoSystem"]
+script = ExtResource("3_recorder")
+
+[node name="EchoGhost" parent="EchoSystem" instance=ExtResource("4_ghost")]
+
+[node name="HUD" parent="." instance=ExtResource("5_hud")]
