@@ -32,23 +32,64 @@ var _sting_player: AudioStreamPlayer
 var _verdict_player: AudioStreamPlayer
 
 
+var _synth_thread: Thread
+
+
 func _ready() -> void:
 	_setup_buses()
 
-	_music_player = _make_player(SoundFactory.music_loop(), &"Music")
-	_music_player.play()
-	_wind_player = _make_player(SoundFactory.wind_loop(), &"Ambience")
-	_wind_player.play()
-
+	# Only the (tiny, few-ms) UI sounds are synthesized on the main
+	# thread — the menu needs them the instant it appears. Everything
+	# else is built on a worker thread so neither startup nor any frame
+	# ever stalls on synthesis (GDScript sample loops can cost seconds on
+	# a loaded machine — see OPTIMIZATION_REPORT.md). SoundFactory's
+	# cache is mutex-guarded for exactly this.
 	_click_player = _make_player(SoundFactory.ui_click(), &"UI")
 	_hover_player = _make_player(SoundFactory.ui_hover(), &"UI")
+	_music_player = _make_player(null, &"Music")
+	_wind_player = _make_player(null, &"Ambience")
 	# Stings and verdict jingles get separate players so the victory/defeat
 	# jingle can start while the round-end gong is still ringing out.
 	_sting_player = _make_player(null, &"SFX")
 	_verdict_player = _make_player(null, &"SFX")
 
+	_synth_thread = Thread.new()
+	_synth_thread.start(_synthesize_in_background)
+
 	RoundManager.round_started.connect(_on_round_started)
 	RoundManager.round_ended.connect(_on_round_ended)
+
+
+## Worker thread: pure computation via SoundFactory (no scene-tree
+## access), results handed back to the main thread through call_deferred
+## (the message queue is thread-safe). If gameplay asks for one of these
+## before the worker gets to it, the requester just builds it itself —
+## the mutex-guarded cache makes that safe, merely redundant.
+func _synthesize_in_background() -> void:
+	var music := SoundFactory.music_loop()
+	var wind := SoundFactory.wind_loop()
+	_start_loops.call_deferred(music, wind)
+	# Pre-warm the rest so nothing synthesizes mid-round.
+	SoundFactory.pool_hum_loop()
+	SoundFactory.footstep()
+	SoundFactory.echo_footstep()
+	SoundFactory.teleport()
+	SoundFactory.round_start()
+	SoundFactory.round_end()
+	SoundFactory.victory()
+	SoundFactory.defeat()
+
+
+func _start_loops(music: AudioStream, wind: AudioStream) -> void:
+	_music_player.stream = music
+	_music_player.play()
+	_wind_player.stream = wind
+	_wind_player.play()
+
+
+func _exit_tree() -> void:
+	if _synth_thread != null and _synth_thread.is_started():
+		_synth_thread.wait_to_finish()
 
 
 func play_click() -> void:

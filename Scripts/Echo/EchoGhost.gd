@@ -50,12 +50,14 @@ func _process(_delta: float) -> void:
 		return
 
 	_set_active(true)
-	global_transform = recorder.get_transform_at(delay_seconds)
-	_update_animation()
+	# One buffer lookup per frame answers both position and animation
+	# (see EchoRecorder.sample_at).
+	var sample := recorder.sample_at(delay_seconds)
+	global_transform = sample["xform"]
+	_update_animation(sample["anim"])
 
 
-func _update_animation() -> void:
-	var anim_name := recorder.get_animation_at(delay_seconds)
+func _update_animation(anim_name: String) -> void:
 	if anim_name == "" or anim_name == _current_anim:
 		return
 	if _anim_player.has_animation(anim_name):

@@ -47,6 +47,14 @@ var _paused := false
 var _connection_status_label: Label
 var _grace_deadline := -1.0
 
+# Per-frame _process work only rebuilds label strings when the displayed
+# value actually changed — Label.text assignment isn't free (layout), and
+# these run every frame for the whole session.
+var _last_timer_second := -1
+var _last_lobby_player_count := -1
+var _last_countdown_value := -1
+var _last_grace_second := -1
+
 
 func _ready() -> void:
 	_root = Control.new()
@@ -77,23 +85,30 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
 	if RoundManager.round_active:
 		var whole_seconds := int(ceil(RoundManager.time_left))
-		_timer_label.text = "%02d:%02d" % [whole_seconds / 60, whole_seconds % 60]
-		# The clock turns gold when the hider is close to winning.
-		_timer_label.add_theme_color_override("font_color",
-			UIKit.COLOR_GOLD if RoundManager.time_left < 15.0 else UIKit.COLOR_TEXT)
-	elif MatchStateManager.is_in_lobby():
+		if whole_seconds != _last_timer_second:
+			_last_timer_second = whole_seconds
+			_timer_label.text = "%02d:%02d" % [whole_seconds / 60, whole_seconds % 60]
+			# The clock turns gold when the hider is close to winning.
+			_timer_label.add_theme_color_override("font_color",
+				UIKit.COLOR_GOLD if whole_seconds <= 15 else UIKit.COLOR_TEXT)
+	elif MatchStateManager.is_in_lobby() and _last_timer_second != -1:
+		_last_timer_second = -1
 		_timer_label.text = "--:--"
 
 	if _lobby_panel.visible:
 		_refresh_lobby()
 
 	if _round_end_panel.visible:
-		var remaining := ceili(RoundManager.NEXT_ROUND_DELAY - (Time.get_ticks_msec() / 1000.0 - _round_end_started_at))
-		_round_end_countdown.text = "Next round in %d..." % maxi(remaining, 0)
+		var remaining := maxi(ceili(RoundManager.NEXT_ROUND_DELAY - (Time.get_ticks_msec() / 1000.0 - _round_end_started_at)), 0)
+		if remaining != _last_countdown_value:
+			_last_countdown_value = remaining
+			_round_end_countdown.text = "Next round in %d..." % remaining
 
 	if _grace_deadline > 0.0:
-		var remaining := maxf(_grace_deadline - Time.get_ticks_msec() / 1000.0, 0.0)
-		_connection_status_label.text = "Opponent disconnected — waiting %ds to reconnect..." % ceili(remaining)
+		var remaining := ceili(maxf(_grace_deadline - Time.get_ticks_msec() / 1000.0, 0.0))
+		if remaining != _last_grace_second:
+			_last_grace_second = remaining
+			_connection_status_label.text = "Opponent disconnected — waiting %ds to reconnect..." % remaining
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -303,6 +318,7 @@ func _on_round_ended(winner_role: int) -> void:
 		winner_name, MatchStateManager.round_number() - 1, how,
 		MatchStateManager.hunter_score, MatchStateManager.hider_score]
 	_round_end_started_at = Time.get_ticks_msec() / 1000.0
+	_last_countdown_value = -1
 	_round_end_panel.visible = true
 
 
@@ -340,6 +356,7 @@ func _apply_phase(phase: int) -> void:
 	var in_lobby: bool = phase == MatchStateManager.MatchPhase.LOBBY
 	_lobby_panel.visible = in_lobby
 	if in_lobby:
+		_last_lobby_player_count = -1 # force a fresh refresh on re-entry
 		_round_end_panel.visible = false
 		_game_over_panel.visible = false
 		_role_chip.text = ""
@@ -348,6 +365,9 @@ func _apply_phase(phase: int) -> void:
 
 func _refresh_lobby() -> void:
 	var player_count := NetworkManager.connected_peer_ids.size()
+	if player_count == _last_lobby_player_count:
+		return
+	_last_lobby_player_count = player_count
 	_lobby_players_label.text = "Players: %d / 2" % player_count
 	if multiplayer.multiplayer_peer != null and multiplayer.is_server():
 		_lobby_start_button.visible = true
@@ -416,6 +436,7 @@ func _local_role() -> int:
 
 func _on_reconnect_grace_started(_role: int) -> void:
 	_grace_deadline = Time.get_ticks_msec() / 1000.0 + NetworkManager.RECONNECT_GRACE_PERIOD
+	_last_grace_second = -1
 	_connection_status_label.visible = true
 
 

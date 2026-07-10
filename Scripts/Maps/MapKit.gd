@@ -11,6 +11,14 @@ class_name MapKit
 
 const WORLD_LAYER := 1
 
+## Flyweight cache for particle draw-pass meshes: every emitter with the
+## same color and dot size shares one mesh + material resource instead of
+## allocating its own (the mirror pool, both teleport pads, every burst
+## and every ghost trail otherwise each carry a duplicate). Keyed by
+## "radius:color"; lives for the whole session, and the full set is a
+## handful of tiny primitives. See OPTIMIZATION_REPORT.md.
+static var _particle_mesh_cache: Dictionary = {}
+
 ## Every piece of static geometry MapKit builds is tagged into this
 ## group, regardless of where it ends up in the map's node tree —
 ## bake_navigation() parses geometry by group membership rather than by
@@ -147,6 +155,10 @@ static func make_sparkle_particles(color: Color, amount: int, spawn_radius: floa
 	particles.amount = amount
 	particles.lifetime = 2.5
 	particles.emitting = true
+	# Tiny unshaded emissive dots never contribute a visible shadow, but
+	# left on (the default) they'd each be drawn again in every shadow
+	# pass — the single cheapest rendering flag in this file.
+	particles.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 
 	var process_material := ParticleProcessMaterial.new()
 	process_material.direction = Vector3(0, 1, 0)
@@ -160,9 +172,20 @@ static func make_sparkle_particles(color: Color, amount: int, spawn_radius: floa
 	process_material.scale_max = 1.0
 	particles.process_material = process_material
 
+	particles.draw_pass_1 = _get_particle_dot_mesh(color, 0.05)
+	return particles
+
+
+## Shared (cached) draw mesh for all particle effects of a given color
+## and dot size — see _particle_mesh_cache above.
+static func _get_particle_dot_mesh(color: Color, radius: float) -> SphereMesh:
+	var key := "%s:%s" % [radius, color.to_html()]
+	if _particle_mesh_cache.has(key):
+		return _particle_mesh_cache[key]
+
 	var mesh := SphereMesh.new()
-	mesh.radius = 0.05
-	mesh.height = 0.1
+	mesh.radius = radius
+	mesh.height = radius * 2.0
 	mesh.radial_segments = 6
 	mesh.rings = 3
 	var material := StandardMaterial3D.new()
@@ -173,9 +196,8 @@ static func make_sparkle_particles(color: Color, amount: int, spawn_radius: floa
 	material.albedo_color = Color(color.r, color.g, color.b, 0.7)
 	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	mesh.material = material
-	particles.draw_pass_1 = mesh
-
-	return particles
+	_particle_mesh_cache[key] = mesh
+	return mesh
 
 
 ## A one-shot particle burst — teleport activation, capture, anything
@@ -210,6 +232,7 @@ static func make_trail_particles(color: Color, amount: int, node_name := "Trail"
 	particles.lifetime = 0.5
 	particles.emitting = false
 	particles.local_coords = false
+	particles.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 
 	var process_material := ParticleProcessMaterial.new()
 	process_material.direction = Vector3(0, 1, 0)
@@ -221,21 +244,7 @@ static func make_trail_particles(color: Color, amount: int, node_name := "Trail"
 	process_material.scale_max = 0.8
 	particles.process_material = process_material
 
-	var mesh := SphereMesh.new()
-	mesh.radius = 0.04
-	mesh.height = 0.08
-	mesh.radial_segments = 6
-	mesh.rings = 3
-	var material := StandardMaterial3D.new()
-	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	material.emission_enabled = true
-	material.emission = color
-	material.emission_energy_multiplier = 2.0
-	material.albedo_color = Color(color.r, color.g, color.b, 0.6)
-	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	mesh.material = material
-	particles.draw_pass_1 = mesh
-
+	particles.draw_pass_1 = _get_particle_dot_mesh(color, 0.04)
 	return particles
 
 

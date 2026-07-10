@@ -10,12 +10,34 @@ class_name SoundFactory
 ##
 ## All generators are deterministic (fixed RNG seeds) so every player
 ## hears the same game. See AUDIO_SYSTEM.md.
+##
+## Thread-safety: AudioManager synthesizes the heavy sounds on a worker
+## thread at startup (see OPTIMIZATION_REPORT.md), so the cache is
+## mutex-guarded. The lock covers only get/set — a build races at worst
+## into building the same deterministic sound twice, and either result
+## is valid — so a main-thread request never waits behind a long build
+## happening on the worker.
 
 const SFX_RATE := 22050
 const LOOP_RATE := 11025
 const PAD_RATE := 8000 # music/hum pads have no content above ~1kHz — cheaper to build
 
 static var _cache: Dictionary = {}
+static var _cache_mutex := Mutex.new()
+
+
+static func _cached(key: String) -> AudioStreamWAV:
+	_cache_mutex.lock()
+	var value: AudioStreamWAV = _cache.get(key)
+	_cache_mutex.unlock()
+	return value
+
+
+static func _store(key: String, wav: AudioStreamWAV) -> AudioStreamWAV:
+	_cache_mutex.lock()
+	_cache[key] = wav
+	_cache_mutex.unlock()
+	return wav
 
 
 # ---------------------------------------------------------------------------
@@ -25,11 +47,11 @@ static var _cache: Dictionary = {}
 ## A short, soft thud-plus-scuff. Played with slight per-step pitch
 ## randomization by FootstepEmitter so repeats don't sound mechanical.
 static func footstep() -> AudioStreamWAV:
-	if _cache.has("footstep"):
-		return _cache["footstep"]
+	var cached := _cached("footstep")
+	if cached != null:
+		return cached
 	var samples := _footstep_impulse(0.09, 1.0)
-	_cache["footstep"] = _wav(samples, SFX_RATE, false)
-	return _cache["footstep"]
+	return _store("footstep", _wav(samples, SFX_RATE, false))
 
 
 ## A footstep with a reverberant, hollow tail — the same impulse as
@@ -37,8 +59,9 @@ static func footstep() -> AudioStreamWAV:
 ## echo system's register, so a ghost's steps are recognizably "the same
 ## sound, but wrong": you can tell an echo from the real player by ear.
 static func echo_footstep() -> AudioStreamWAV:
-	if _cache.has("echo_footstep"):
-		return _cache["echo_footstep"]
+	var cached := _cached("echo_footstep")
+	if cached != null:
+		return cached
 	var impulse := _footstep_impulse(0.09, 0.7)
 	var n := int(0.55 * SFX_RATE)
 	var samples := PackedFloat32Array()
@@ -55,15 +78,15 @@ static func echo_footstep() -> AudioStreamWAV:
 		var t := float(i) / SFX_RATE
 		samples[i] += sin(TAU * 660.0 * t) * exp(-t * 9.0) * 0.05
 		samples[i] = clampf(samples[i], -1.0, 1.0)
-	_cache["echo_footstep"] = _wav(samples, SFX_RATE, false)
-	return _cache["echo_footstep"]
+	return _store("echo_footstep", _wav(samples, SFX_RATE, false))
 
 
 ## A rising sweep with a shimmer partial — played positionally at both
 ## ends of a teleport jump (see TeleportPad.gd).
 static func teleport() -> AudioStreamWAV:
-	if _cache.has("teleport"):
-		return _cache["teleport"]
+	var cached := _cached("teleport")
+	if cached != null:
+		return cached
 	var duration := 0.45
 	var n := int(duration * SFX_RATE)
 	var samples := PackedFloat32Array()
@@ -78,22 +101,21 @@ static func teleport() -> AudioStreamWAV:
 		shimmer_phase += TAU * freq * 2.01 / SFX_RATE # slightly detuned octave = shimmer
 		var env := sin(PI * progress) # smooth in and out, no clicks
 		samples[i] = (sin(phase) * 0.5 + sin(shimmer_phase) * 0.15) * env
-	_cache["teleport"] = _wav(samples, SFX_RATE, false)
-	return _cache["teleport"]
+	return _store("teleport", _wav(samples, SFX_RATE, false))
 
 
 static func ui_click() -> AudioStreamWAV:
-	if _cache.has("ui_click"):
-		return _cache["ui_click"]
-	_cache["ui_click"] = _wav(_blip(880.0, 0.06, 80.0, 0.4), SFX_RATE, false)
-	return _cache["ui_click"]
+	var cached := _cached("ui_click")
+	if cached != null:
+		return cached
+	return _store("ui_click", _wav(_blip(880.0, 0.06, 80.0, 0.4), SFX_RATE, false))
 
 
 static func ui_hover() -> AudioStreamWAV:
-	if _cache.has("ui_hover"):
-		return _cache["ui_hover"]
-	_cache["ui_hover"] = _wav(_blip(660.0, 0.045, 90.0, 0.2), SFX_RATE, false)
-	return _cache["ui_hover"]
+	var cached := _cached("ui_hover")
+	if cached != null:
+		return cached
+	return _store("ui_hover", _wav(_blip(660.0, 0.045, 90.0, 0.2), SFX_RATE, false))
 
 
 # ---------------------------------------------------------------------------
@@ -102,17 +124,18 @@ static func ui_hover() -> AudioStreamWAV:
 
 ## Two quick ascending notes: "go".
 static func round_start() -> AudioStreamWAV:
-	if _cache.has("round_start"):
-		return _cache["round_start"]
-	_cache["round_start"] = _wav(_pluck_sequence([440.0, 659.25], 0.16, 0.6, 0.35), SFX_RATE, false)
-	return _cache["round_start"]
+	var cached := _cached("round_start")
+	if cached != null:
+		return cached
+	return _store("round_start", _wav(_pluck_sequence([440.0, 659.25], 0.16, 0.6, 0.35), SFX_RATE, false))
 
 
 ## A gong-ish, deliberately neutral hit — the round is over, but this
 ## sound doesn't say who won; the victory/defeat jingle that follows does.
 static func round_end() -> AudioStreamWAV:
-	if _cache.has("round_end"):
-		return _cache["round_end"]
+	var cached := _cached("round_end")
+	if cached != null:
+		return cached
 	var duration := 1.4
 	var n := int(duration * SFX_RATE)
 	var samples := PackedFloat32Array()
@@ -122,24 +145,23 @@ static func round_end() -> AudioStreamWAV:
 		var env := exp(-t * 3.0) * minf(t * 100.0, 1.0)
 		# Slightly inharmonic partials read as "struck metal" rather than a note.
 		samples[i] = (sin(TAU * 220.0 * t) + 0.6 * sin(TAU * 277.0 * t) + 0.35 * sin(TAU * 331.0 * t)) * env * 0.3
-	_cache["round_end"] = _wav(samples, SFX_RATE, false)
-	return _cache["round_end"]
+	return _store("round_end", _wav(samples, SFX_RATE, false))
 
 
 ## Ascending major arpeggio — you won.
 static func victory() -> AudioStreamWAV:
-	if _cache.has("victory"):
-		return _cache["victory"]
-	_cache["victory"] = _wav(_pluck_sequence([523.25, 659.25, 783.99, 1046.5], 0.13, 0.9, 0.3), SFX_RATE, false)
-	return _cache["victory"]
+	var cached := _cached("victory")
+	if cached != null:
+		return cached
+	return _store("victory", _wav(_pluck_sequence([523.25, 659.25, 783.99, 1046.5], 0.13, 0.9, 0.3), SFX_RATE, false))
 
 
 ## Slow descending minor line — you lost.
 static func defeat() -> AudioStreamWAV:
-	if _cache.has("defeat"):
-		return _cache["defeat"]
-	_cache["defeat"] = _wav(_pluck_sequence([440.0, 349.23, 293.66], 0.24, 0.8, 0.3), SFX_RATE, false)
-	return _cache["defeat"]
+	var cached := _cached("defeat")
+	if cached != null:
+		return cached
+	return _store("defeat", _wav(_pluck_sequence([440.0, 349.23, 293.66], 0.24, 0.8, 0.3), SFX_RATE, false))
 
 
 # ---------------------------------------------------------------------------
@@ -154,8 +176,9 @@ static func defeat() -> AudioStreamWAV:
 ## matches phase at the start exactly. The quantization error is far below
 ## anything audible.
 static func music_loop() -> AudioStreamWAV:
-	if _cache.has("music"):
-		return _cache["music"]
+	var cached := _cached("music")
+	if cached != null:
+		return cached
 	var loop_len := 12.0
 	var chord_a := _quantize_freqs([110.0, 220.0, 261.63, 329.63], loop_len) # A minor
 	var chord_b := _quantize_freqs([174.61, 220.0, 261.63, 349.23], loop_len) # F major
@@ -171,15 +194,15 @@ static func music_loop() -> AudioStreamWAV:
 		for f in chord_b:
 			v += sin(TAU * f * t) * (1.0 - blend)
 		samples[i] = v * 0.11
-	_cache["music"] = _wav(samples, PAD_RATE, true)
-	return _cache["music"]
+	return _store("music", _wav(samples, PAD_RATE, true))
 
 
 ## Environment ambience: filtered brown noise with a slow gust swell.
 ## Loops via a short crossfade of the buffer's tail into its head.
 static func wind_loop() -> AudioStreamWAV:
-	if _cache.has("wind"):
-		return _cache["wind"]
+	var cached := _cached("wind")
+	if cached != null:
+		return cached
 	var loop_len := 6.0
 	var fade := int(0.3 * LOOP_RATE)
 	var n := int(loop_len * LOOP_RATE)
@@ -199,16 +222,16 @@ static func wind_loop() -> AudioStreamWAV:
 	for i in fade:
 		var mix := float(i) / fade
 		samples[i] = samples[i] * mix + raw[n + i] * (1.0 - mix)
-	_cache["wind"] = _wav(samples, LOOP_RATE, true)
-	return _cache["wind"]
+	return _store("wind", _wav(samples, LOOP_RATE, true))
 
 
 ## The mirror pool's positional hum: two barely-detuned low sines whose
 ## beat frequency gives a slow pulse, plus a quiet octave. All frequencies
 ## quantized to the loop length, so it loops seamlessly.
 static func pool_hum_loop() -> AudioStreamWAV:
-	if _cache.has("pool_hum"):
-		return _cache["pool_hum"]
+	var cached := _cached("pool_hum")
+	if cached != null:
+		return cached
 	var loop_len := 4.0
 	var freqs := _quantize_freqs([110.0, 110.5, 220.0], loop_len)
 	var n := int(loop_len * PAD_RATE)
@@ -217,8 +240,7 @@ static func pool_hum_loop() -> AudioStreamWAV:
 	for i in n:
 		var t := float(i) / PAD_RATE
 		samples[i] = (sin(TAU * freqs[0] * t) * 0.5 + sin(TAU * freqs[1] * t) * 0.5 + sin(TAU * freqs[2] * t) * 0.15) * 0.22
-	_cache["pool_hum"] = _wav(samples, PAD_RATE, true)
-	return _cache["pool_hum"]
+	return _store("pool_hum", _wav(samples, PAD_RATE, true))
 
 
 # ---------------------------------------------------------------------------

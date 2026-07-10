@@ -98,6 +98,11 @@ func _build_environment() -> void:
 	sun.light_color = Color(0.85, 0.92, 1.0)
 	sun.shadow_enabled = true
 	sun.directional_shadow_max_distance = 60.0
+	# Two shadow cascades instead of the default four: the arena is only
+	# ~40m corner to corner, so extra splits buy no visible quality while
+	# every shadow caster is drawn once per split — this halves the
+	# geometry rendered into the shadow map (see OPTIMIZATION_REPORT.md).
+	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
 	add_child(sun)
 
 

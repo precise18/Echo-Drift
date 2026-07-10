@@ -14,6 +14,14 @@ extends Node
 const ROUND_TIME := 90.0
 const NEXT_ROUND_DELAY := 5.0 # seconds between rounds; HUD shows the same countdown
 
+## No captures for the first moment of a round. Respawning is
+## client-authoritative (each peer repositions its own body, replicated
+## to the other), so right after a role swap the server can briefly see
+## both bodies at the previous round's positions — close enough to
+## trigger a phantom capture before anyone has actually moved. The grace
+## covers that replication window (and gives the hider a fair beat).
+const CAPTURE_GRACE := 1.5
+
 signal role_assigned(peer_id: int, role: int) # role is a Role.* value
 signal round_started
 signal round_ended(winner_role: int) # winner_role is a Role.* value
@@ -41,6 +49,7 @@ func _ready() -> void:
 
 func register_players_container(container: Node) -> void:
 	_players_container = container
+	_player_node_cache.clear()
 
 
 func _on_timer_expired() -> void:
@@ -66,6 +75,8 @@ func _physics_process(_delta: float) -> void:
 
 
 func _check_for_capture() -> void:
+	if Time.get_ticks_msec() < _capture_grace_until_msec:
+		return
 	var hunter_node := _get_player_node(hunter_id)
 	var hider_node := _get_player_node(hider_id)
 	if hunter_node == null or hider_node == null:
@@ -74,13 +85,28 @@ func _check_for_capture() -> void:
 		_end_round.rpc(Role.HUNTER)
 
 
+# This runs twice per physics tick on the server for the whole round, so
+# the by-name lookup (string allocation + tree search) is cached per peer
+# id; a freed node (disconnect) or a changed id (new round/reconnect)
+# falls through to a fresh lookup automatically.
+var _player_node_cache: Dictionary = {}
+
+
 func _get_player_node(peer_id: int) -> Node3D:
 	if _players_container == null or peer_id < 0:
 		return null
-	var node_name := str(peer_id)
-	if _players_container.has_node(node_name):
-		return _players_container.get_node(node_name) as Node3D
-	return null
+	# Deliberately untyped: the dictionary may hold a freed instance (the
+	# body is queue_free'd on disconnect), and assigning a freed object
+	# into a typed Node3D var is itself an error — validate first.
+	var cached: Variant = _player_node_cache.get(peer_id)
+	if is_instance_valid(cached) and cached.get_parent() == _players_container:
+		return cached
+	var node := _players_container.get_node_or_null(str(peer_id)) as Node3D
+	if node != null:
+		_player_node_cache[peer_id] = node
+	else:
+		_player_node_cache.erase(peer_id)
+	return node
 
 
 ## Entry point for the whole match: called on the server when the host
@@ -106,10 +132,14 @@ func start_round() -> void:
 	_apply_round_state.rpc(roles["hider_id"], roles["hunter_id"], ROUND_TIME)
 
 
+var _capture_grace_until_msec := 0
+
+
 @rpc("authority", "call_local", "reliable")
 func _apply_round_state(new_hider_id: int, new_hunter_id: int, starting_time: float) -> void:
 	hider_id = new_hider_id
 	hunter_id = new_hunter_id
+	_capture_grace_until_msec = Time.get_ticks_msec() + int(CAPTURE_GRACE * 1000.0)
 	_timer.start(starting_time)
 	time_left = starting_time
 	round_active = true
@@ -219,6 +249,7 @@ func reset_state() -> void:
 	round_active = false
 	time_left = ROUND_TIME
 	_next_hider_id = -1
+	_player_node_cache.clear()
 	_timer.stop()
 	MatchStateManager.reset()
 	# _players_container is intentionally left as-is: the server may still

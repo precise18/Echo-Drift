@@ -54,6 +54,9 @@ func _build_visuals() -> void:
 	mesh_instance.mesh = mesh
 	mesh_instance.position = Vector3(0, 0.05, 0)
 	mesh_instance.material_override = material
+	# A translucent glowing disc flat on the floor has no shadow worth
+	# rendering — skip it in every shadow pass.
+	mesh_instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(mesh_instance)
 
 	var light := OmniLight3D.new()
