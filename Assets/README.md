@@ -4,8 +4,9 @@ Most of the game is still **procedural geometry** (Godot primitive meshes
 — capsules, cylinders, boxes, spheres — with `StandardMaterial3D`s in
 `res://Materials/`, several now with a procedural noise-based normal map
 rather than a flat color — see `ART_DIRECTION.md`). This also extends to
-audio (see `Scripts/Echo/EchoAudio.gd`, which synthesizes its tone at
-runtime rather than requiring a sound file) and maps (see
+audio (see `AUDIO_SYSTEM.md` — every sound in the game, from footsteps to
+the music bed, is synthesized at runtime by `Scripts/Audio/SoundFactory.gd`
+rather than requiring sound files) and maps (see
 `Scripts/Maps/MapKit.gd`, which builds every map from shared procedural
 pieces — see `MAP_SYSTEM.md`).
 

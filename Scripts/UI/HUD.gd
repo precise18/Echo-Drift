@@ -16,6 +16,8 @@ func _ready() -> void:
 	round_end_panel.visible = false
 	connection_status_label.visible = false
 	restart_button.pressed.connect(_on_restart_pressed)
+	restart_button.pressed.connect(AudioManager.play_click)
+	restart_button.mouse_entered.connect(AudioManager.play_hover)
 	RoundManager.round_started.connect(_on_round_started)
 	RoundManager.round_ended.connect(_on_round_ended)
 	RoundManager.role_assigned.connect(_on_role_assigned)

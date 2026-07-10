@@ -15,6 +15,11 @@ func _ready() -> void:
 	NetworkManager.connection_failed.connect(_on_connection_failed)
 	_populate_map_options()
 
+	for button in [host_button, join_button]:
+		button.pressed.connect(AudioManager.play_click)
+		button.mouse_entered.connect(AudioManager.play_hover)
+	map_option_button.item_selected.connect(func(_index: int) -> void: AudioManager.play_click())
+
 	# Explains why the player landed back here instead of silently
 	# dumping them at the menu — e.g. after the host disconnected. This
 	# is the practical stand-in for host migration: no seamless handoff,

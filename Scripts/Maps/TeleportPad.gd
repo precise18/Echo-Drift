@@ -19,6 +19,9 @@ var linked_pad: TeleportPad = null
 var pad_color := Color(0.55, 0.95, 1.0) # matches the echo ghost's cyan glow
 
 var _cooldown_until: Dictionary = {} # CharacterBody3D -> ticks_msec they're clear to teleport again
+var _sound_cooldown_until: Dictionary = {} # CharacterBody3D -> ticks_msec; rate-limits the whoosh only
+
+var _whoosh: AudioStreamPlayer3D
 
 
 func _ready() -> void:
@@ -66,14 +69,35 @@ func _build_visuals() -> void:
 	idle_sparkles.position = Vector3(0, 0.1, 0)
 	add_child(idle_sparkles)
 
+	_whoosh = AudioStreamPlayer3D.new()
+	_whoosh.name = "Whoosh"
+	_whoosh.stream = SoundFactory.teleport()
+	_whoosh.bus = &"SFX"
+	_whoosh.max_distance = 24.0
+	_whoosh.position = Vector3(0, 0.5, 0)
+	add_child(_whoosh)
+
 
 func _on_body_entered(body: Node3D) -> void:
 	if linked_pad == null or not (body is CharacterBody3D):
 		return
+
+	var now := Time.get_ticks_msec()
+
+	# The whoosh plays on *every* peer, before the authority guard below:
+	# body_entered fires everywhere (remote bodies' replicated positions
+	# enter the area too), and a genuine teleport produces exactly one
+	# entered event at each end — departure here, arrival at the linked
+	# pad — so both players hear both ends positionally with no audio
+	# networking. Rate-limited per body so an owner-side re-entry that's
+	# still on teleport cooldown can at worst produce one stray whoosh.
+	if _sound_cooldown_until.get(body, 0) <= now:
+		_sound_cooldown_until[body] = now + COOLDOWN_MSEC
+		_whoosh.play()
+
 	if not body.is_multiplayer_authority():
 		return # each peer only teleports the body it actually controls
 
-	var now := Time.get_ticks_msec()
 	if _cooldown_until.get(body, 0) > now:
 		return
 

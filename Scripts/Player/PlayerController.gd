@@ -29,6 +29,14 @@ var _camera_pitch := 0.0
 
 func _ready() -> void:
 	peer_id = name.to_int()
+	# Every peer adds this to every player body, local or remote — it
+	# derives steps from observed movement (replicated position included),
+	# so both players' footsteps are audible and positional everywhere
+	# with no footstep networking (see FootstepEmitter.gd).
+	var footsteps := FootstepEmitter.new()
+	footsteps.name = "Footsteps"
+	footsteps.stream = SoundFactory.footstep()
+	add_child(footsteps)
 	camera.current = is_multiplayer_authority()
 	if is_multiplayer_authority():
 		_capture_mouse()

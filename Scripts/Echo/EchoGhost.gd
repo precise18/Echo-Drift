@@ -22,6 +22,7 @@ var recorder: EchoRecorder = null
 
 var _current_anim := ""
 var _trail: GPUParticles3D
+var _footsteps: FootstepEmitter
 
 
 func _ready() -> void:
@@ -31,6 +32,16 @@ func _ready() -> void:
 	_trail = MapKit.make_trail_particles(GHOST_CYAN, 10, "Trail")
 	_trail.position = Vector3(0, 0.1, 0)
 	add_child(_trail)
+
+	# The ghost's replayed movement gets footsteps too — same emitter as a
+	# live player but with the reverberant echo variant, so a Hunter can
+	# tell "real steps" from "echo steps" by ear (see SoundFactory.
+	# echo_footstep). Off until the ghost is actually visible/replaying.
+	_footsteps = FootstepEmitter.new()
+	_footsteps.name = "EchoFootsteps"
+	_footsteps.stream = SoundFactory.echo_footstep()
+	_footsteps.active = false
+	add_child(_footsteps)
 
 
 func _process(_delta: float) -> void:
@@ -57,6 +68,7 @@ func _set_active(active: bool) -> void:
 		return
 	visible = active
 	_trail.emitting = active
+	_footsteps.active = active
 	if active:
 		_audio.begin()
 	else:

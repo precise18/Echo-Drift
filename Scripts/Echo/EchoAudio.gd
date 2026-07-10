@@ -24,6 +24,7 @@ func _ready() -> void:
 	generator.mix_rate = SAMPLE_RATE
 	generator.buffer_length = 0.2
 	stream = generator
+	bus = &"SFX" # a gameplay cue like footsteps, not background ambience
 	max_distance = 15.0
 	unit_size = 4.0
 

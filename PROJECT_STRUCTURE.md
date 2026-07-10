@@ -31,7 +31,11 @@ Echo Hunt/
 │   │   ├── NetworkManager.gd     Host / join — ENet connection lifecycle only
 │   │   ├── RoundManager.gd       Orchestrates one round: roles, timer, win checks, restart
 │   │   ├── MatchStateManager.gd  Cumulative score + match phase across rounds
-│   │   └── MapManager.gd         Map registry + network-synced map selection
+│   │   ├── MapManager.gd         Map registry + network-synced map selection
+│   │   └── AudioManager.gd       Buses, music/ambience beds, UI sounds, round stings (see AUDIO_SYSTEM.md)
+│   ├── Audio/
+│   │   ├── SoundFactory.gd       Synthesizes + caches every sound as AudioStreamWAV (no audio files)
+│   │   └── FootstepEmitter.gd    Positional footsteps derived from observed movement (players + ghosts)
 │   ├── Gameplay/
 │   │   ├── Role.gd               Shared HIDER/HUNTER/NONE identifier
 │   │   ├── RoleManager.gd        Pure logic: who hides/hunts next (team assignment)
@@ -56,12 +60,12 @@ Echo Hunt/
 │       ├── Main.gd               Loads the selected map, spawns players, wires echo target
 │       └── SpawnManager.gd       Pure logic: spawn-point lookup + player (re)placement
 │
-├── Materials/                   StandardMaterial3D placeholders (flat colors), shared across maps
+├── Materials/                   Shared StandardMaterial3Ds (flat colors + procedural normal maps, see ART_DIRECTION.md)
 ├── Assets/
 │   ├── Characters/MovementAnimations.tres  Shared Idle/Walk/Run library (Player + EchoGhost)
-│   └── Environment/              Empty placeholder folder for future art
+│   └── Environment/NatureKit/    CC0 low-poly dressing props (Kenney — see ART_DIRECTION.md)
 ├── UI/Theme/                    Reserved for a shared Theme resource (post-MVP)
-└── Audio/                       Reserved for SFX/music (post-MVP)
+└── Audio/                       Reserved for recorded SFX/music files if synthesis is ever replaced (see AUDIO_SYSTEM.md)
 ```
 
 See [`GAMEPLAY_SYSTEMS.md`](GAMEPLAY_SYSTEMS.md) for a full writeup of every

@@ -134,6 +134,18 @@ func _build_mirror_pool() -> void:
 	sparkles.position = Vector3(0, 0.1, 0)
 	add_child(sparkles)
 
+	# A low positional hum so the pool is audible before it's visible —
+	# an orientation landmark by ear as well as by sight, and quiet enough
+	# to never mask footsteps (which are gameplay information here).
+	var hum := AudioStreamPlayer3D.new()
+	hum.name = "MirrorPoolHum"
+	hum.stream = SoundFactory.pool_hum_loop()
+	hum.bus = &"Ambience"
+	hum.max_distance = 16.0
+	hum.position = Vector3(0, 0.5, 0)
+	add_child(hum)
+	hum.play()
+
 
 ## Every obstacle is placed as a symmetric pair (x, z) / (-x, z) so the
 ## whole layout mirrors across X = 0 — a Hunter learning one half of the
