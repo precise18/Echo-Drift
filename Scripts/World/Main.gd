@@ -1,7 +1,8 @@
 extends Node3D
 ## Game root: wires together the arena, player spawning, and the echo
-## system. Round/score decisions themselves live in GameManager; this
-## script only connects the scene tree to that state.
+## system. Round/match decisions live in RoundManager/MatchStateManager;
+## spawn placement logic lives in SpawnManager; this script only connects
+## the scene tree to those systems.
 
 const PLAYER_SCENE := preload("res://Scenes/Player/Player.tscn")
 
@@ -12,15 +13,16 @@ const PLAYER_SCENE := preload("res://Scenes/Player/Player.tscn")
 
 
 func _ready() -> void:
-	GameManager.register_players_container(players_container)
+	RoundManager.register_players_container(players_container)
 	echo_ghost.recorder = echo_recorder
 
 	spawner.spawned.connect(_on_node_spawned)
-	GameManager.role_assigned.connect(_on_role_assigned)
-	GameManager.round_started.connect(_on_round_started)
+	RoundManager.role_assigned.connect(_on_role_assigned)
+	RoundManager.round_started.connect(_on_round_started)
 
 	if multiplayer.is_server():
 		NetworkManager.player_connected.connect(_on_peer_connected_server)
+		NetworkManager.player_disconnected.connect(_on_peer_disconnected_server)
 		for id in NetworkManager.connected_peer_ids:
 			_spawn_player(id)
 		_try_start_round()
@@ -31,9 +33,20 @@ func _on_peer_connected_server(id: int) -> void:
 	_try_start_round()
 
 
+## A round can't continue with only one player left, and leaving the old
+## round_active=true in place would permanently block start_round() the
+## next time someone joins. Despawn their body and reset to a clean,
+## restartable state instead.
+func _on_peer_disconnected_server(id: int) -> void:
+	var node := players_container.get_node_or_null(str(id))
+	if node != null:
+		node.queue_free()
+	RoundManager.reset_state()
+
+
 func _try_start_round() -> void:
-	if players_container.get_child_count() >= 2 and not GameManager.round_active:
-		GameManager.start_round()
+	if players_container.get_child_count() >= 2 and not RoundManager.round_active:
+		RoundManager.start_round()
 
 
 func _spawn_player(peer_id: int) -> void:
@@ -57,8 +70,8 @@ func _on_node_spawned(node: Node) -> void:
 		node.set_multiplayer_authority(node_name.to_int())
 
 
-func _on_role_assigned(peer_id: int, role: GameManager.Role) -> void:
-	if role != GameManager.Role.HIDER:
+func _on_role_assigned(peer_id: int, role: int) -> void:
+	if role != Role.HIDER:
 		return
 	var hider_node := players_container.get_node_or_null(str(peer_id))
 	if hider_node != null:
@@ -66,21 +79,17 @@ func _on_role_assigned(peer_id: int, role: GameManager.Role) -> void:
 
 
 func _on_round_started() -> void:
-	_move_local_player_to_spawn()
+	_respawn_local_player()
 
 
 ## Each peer only moves the body it has authority over; the synchronizer
-## replicates that position to everyone else.
-func _move_local_player_to_spawn() -> void:
+## replicates that position to everyone else. Delegates the actual
+## placement to SpawnManager (see Scripts/World/SpawnManager.gd).
+func _respawn_local_player() -> void:
 	var local_id := multiplayer.get_unique_id()
-	var player: Node3D = players_container.get_node_or_null(str(local_id))
+	var player: CharacterBody3D = players_container.get_node_or_null(str(local_id))
 	if player == null or not player.is_multiplayer_authority():
 		return
 
-	var group := "hider_spawn" if local_id == GameManager.hider_id else "hunter_spawn"
-	var markers := get_tree().get_nodes_in_group(group)
-	if markers.is_empty():
-		return
-
-	player.global_position = markers[0].global_position
-	player.velocity = Vector3.ZERO
+	var role := Role.HIDER if local_id == RoundManager.hider_id else Role.HUNTER
+	SpawnManager.respawn_player(get_tree(), player, role)

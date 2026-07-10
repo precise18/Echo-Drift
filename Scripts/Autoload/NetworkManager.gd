@@ -1,6 +1,7 @@
 extends Node
-## Autoload: owns the ENet connection lifecycle (host / join / disconnect).
-## Gameplay state (roles, timer, score) lives in GameManager, not here.
+## Autoload: owns the ENet connection lifecycle (hosting, joining, and
+## reacting to connection loss). Gameplay state (roles, timer, score)
+## lives in RoundManager / MatchStateManager, not here.
 
 const PORT := 7777
 const MAX_PLAYERS := 2
@@ -10,7 +11,6 @@ const MENU_SCENE := "res://Scenes/UI/MainMenu.tscn"
 signal player_connected(peer_id: int)
 signal player_disconnected(peer_id: int)
 signal connection_failed
-signal connection_succeeded
 
 var connected_peer_ids: Array[int] = []
 
@@ -45,14 +45,6 @@ func join_game(address: String) -> Error:
 	return OK
 
 
-func leave_game() -> void:
-	if multiplayer.multiplayer_peer != null:
-		multiplayer.multiplayer_peer.close()
-		multiplayer.multiplayer_peer = null
-	connected_peer_ids.clear()
-	get_tree().change_scene_to_file(MENU_SCENE)
-
-
 func _on_peer_connected(id: int) -> void:
 	if not connected_peer_ids.has(id):
 		connected_peer_ids.append(id)
@@ -66,16 +58,20 @@ func _on_peer_disconnected(id: int) -> void:
 
 func _on_connected_to_server() -> void:
 	connected_peer_ids = [1, multiplayer.get_unique_id()]
-	connection_succeeded.emit()
 	get_tree().change_scene_to_file(GAME_SCENE)
 
 
 func _on_connection_failed() -> void:
 	multiplayer.multiplayer_peer = null
+	RoundManager.reset_state()
 	connection_failed.emit()
 
 
 func _on_server_disconnected() -> void:
 	multiplayer.multiplayer_peer = null
 	connected_peer_ids.clear()
+	# Without this, a stale round_active=true from the lost session would
+	# block the next start_round() call after re-hosting/re-joining,
+	# silently freezing the game until the app was fully restarted.
+	RoundManager.reset_state()
 	get_tree().change_scene_to_file(MENU_SCENE)
