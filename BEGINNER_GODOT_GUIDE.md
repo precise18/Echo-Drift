@@ -79,24 +79,30 @@ function to see what it does.
 You don't need to reopen Godot after editing a script — just save
 (Ctrl+S) and press F5 again to see the change.
 
-## 7. Testing multiplayer locally
+## 7. Where's the art? Where's the audio?
+
+Something unusual (and useful to know before you go hunting for files):
+almost nothing in this game is an asset file. The map geometry is built
+by code (`Scripts/Maps/MapKit.gd`), every sound is synthesized by code
+(`Scripts/Audio/SoundFactory.gd`), and the entire UI theme is built by
+code (`Scripts/UI/UIKit.gd`). If you want to change a wall color, a
+footstep sound, or a button style, you change a script, not an asset.
+The only real asset files are ten small CC0 props in
+`Assets/Environment/NatureKit/`.
+
+## 8. Testing multiplayer locally
 
 See [`HOW_TO_RUN.md`](HOW_TO_RUN.md) for full steps. Short version:
 **Debug → Run Multiple Instances → 2**, then F5. Two windows open; host
-in one, join `127.0.0.1` in the other.
+in one, join `127.0.0.1` in the other, then press **Start Match** in
+the host window's lobby.
 
-## 8. Exporting a Windows build
+## 9. Exporting builds / publishing
 
-See the "Exporting a Windows build" section in
-[`HOW_TO_RUN.md`](HOW_TO_RUN.md). In short: **Project → Export**, add a
-Windows Desktop preset (installing export templates if prompted), then
-**Export Project**.
-
-## 9. Exporting for itch.io
-
-Also covered in `HOW_TO_RUN.md` under "Publishing to itch.io" — zip the
-exported `.exe` + `.pck`, upload to an itch.io project page, mark the
-platform as Windows.
+See [`BUILD_GUIDE.md`](BUILD_GUIDE.md) for building,
+[`EXPORT_GUIDE.md`](EXPORT_GUIDE.md) for the export presets and
+templates, and [`ITCH_IO_DEPLOYMENT.md`](ITCH_IO_DEPLOYMENT.md) for
+publishing the result to itch.io.
 
 ## 10. Common mistakes (and how to avoid them)
 
@@ -109,8 +115,9 @@ platform as Windows.
   *what it does* is set in its script. Beginners often hunt for
   behavior in the Inspector when it's actually in code, or vice versa.
 - **Testing multiplayer with only one window open** — hosting alone
-  will not spawn a second player and the round won't start (this MVP
-  needs exactly two connected peers). Always test with two instances.
+  leaves you in the warm-up lobby with **Start Match** disabled (the
+  game needs exactly two connected players). Always test with two
+  instances.
 - **Forgetting to click into the game window before using the mouse** —
   the OS won't send mouse-look input to an unfocused window.
 - **Editing `.tscn` files by hand outside Godot** — possible (they're
@@ -121,5 +128,5 @@ platform as Windows.
   cache, not source content. It's already excluded via `.gitignore`;
   don't remove that entry.
 - **Assuming Play (F5) tests the exported build** — always test the
-  actual exported `.exe` before publishing; editor behavior and exported
-  behavior can differ slightly (see `HOW_TO_RUN.md`).
+  actual exported binary before publishing; editor behavior and
+  exported behavior can differ slightly (see `BUILD_GUIDE.md`).

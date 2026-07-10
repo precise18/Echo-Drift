@@ -46,11 +46,17 @@ decision via RPC and updates its own local copy.
 **Public API:**
 - `register_players_container(container: Node)` — called once by
   `Main.gd` so RoundManager can look up player nodes by peer id.
+- `start_match()` — server-only; called when the host presses Start
+  Match in the warm-up lobby (see UI_GUIDE.md). Kicks off round 1;
+  every later round starts itself after `NEXT_ROUND_DELAY`, with roles
+  swapped.
 - `start_round()` — server-only. Picks roles via `RoleManager`, starts
-  the timer, and replicates the new round state to every peer.
-- `request_restart()` — callable from **any** peer (e.g. the "Play
-  Again" button); internally forwards the request to the server via
-  `rpc_id(1, ...)`.
+  the timer, and replicates the new round state to every peer. Captures
+  are suppressed for the first `CAPTURE_GRACE` seconds of each round
+  (covers the respawn-replication window; see OPTIMIZATION_REPORT.md).
+- `request_rematch()` — callable from **any** peer, but only once the
+  match is over (Game Over screen); forwards to the server, which
+  resets the score on every peer and starts round 1 again.
 - `reset_state()` — clears all round state. Called on disconnect so a
   lost connection can never leave the game stuck mid-round.
 
@@ -60,13 +66,13 @@ decision via RPC and updates its own local copy.
 `round_ended(winner_role)`.
 
 **Testing:**
-1. Host + join, confirm `RoundManager.round_active` becomes `true` on
-   both peers within ~1 second of the second player connecting.
+1. Host + join, press Start Match in the lobby; confirm
+   `RoundManager.round_active` becomes `true` on both peers.
 2. Confirm `role_assigned` fires exactly twice per round start (once per
-   player) and each peer's `You are: HIDER/HUNTER` label matches what
+   player) and each peer's HIDER/HUNTER role chip matches what
    `hider_id`/`hunter_id` actually holds.
-3. See "Round restart" and "Win / Lose conditions" below for the rest of
-   this system's behavior.
+3. See "Round transitions" and "Win / Lose conditions" below for the
+   rest of this system's behavior.
 
 ---
 
@@ -82,23 +88,26 @@ system doesn't know or care *how* a round was won, only that one was.
 - `begin_round()` — called by RoundManager when a round starts. Sets
   `phase = ROUND_ACTIVE`.
 - `record_round_result(winner_role)` — called by RoundManager when a
-  round ends. Increments the winner's score and sets
-  `phase = ROUND_ENDED`.
+  round ends. Increments the winner's score; sets `phase = MATCH_OVER`
+  if that score reaches `ROUNDS_TO_WIN`, else `ROUND_ENDED`.
+- `is_match_over()`, `match_winner_role()`, `round_number()`,
+  `is_in_lobby()` — small queries used by the HUD, RoundManager, and
+  PlayerController (warm-up movement).
 - `reset()` — zeroes both scores and returns to `LOBBY`. Called
-  alongside `RoundManager.reset_state()` on disconnect.
+  alongside `RoundManager.reset_state()` on disconnect, and on rematch.
 
 **Public state:** `hunter_score`, `hider_score`, `phase`
-(`MatchPhase.LOBBY` / `ROUND_ACTIVE` / `ROUND_ENDED`).
+(`MatchPhase.LOBBY` / `ROUND_ACTIVE` / `ROUND_ENDED` / `MATCH_OVER`).
 
 **Signals:** `score_changed(hunter_score, hider_score)`,
 `phase_changed(new_phase)`.
 
-**Note on scope:** this MVP has no "first to N wins" match-ending rule —
-per the original brief, rounds repeat indefinitely via "Play Again".
-`MatchPhase` never reaches a terminal state on its own. The phase enum
-exists so that rule *could* be added later (e.g. `phase = MATCH_OVER`
-once a score threshold is hit) without touching `RoundManager` at all —
-see Recommendations in `STABILIZATION_REPORT.md`.
+**Match rule:** a match is **first to `ROUNDS_TO_WIN` (3) round wins**.
+Every peer reaches the match-over conclusion independently from the
+same replicated round results, so no extra synchronization exists for
+it. (The original MVP had endless "Play Again" rounds; the UX pass —
+see UI_GUIDE.md — replaced that with the lobby → rounds → game over →
+rematch structure.)
 
 **Testing:**
 1. Play a round to completion. Confirm `score_changed` fires exactly
@@ -191,36 +200,43 @@ Hunter before calling this again, so **roles always swap on restart** —
 both players get a turn at both roles.
 
 **Testing:**
-1. First round after hosting: confirm the host is always Hider and the
-   joining player is always Hunter (deterministic, not random — makes
-   this easy to test repeatably).
-2. Click "Play Again": confirm roles swap (host becomes Hunter, the
-   other player becomes Hider).
-3. Restart again: confirm they swap back. Roles should alternate every
-   single restart, never repeat the same assignment twice in a row.
+1. First round after the host presses Start Match: confirm the host is
+   always Hider and the joining player is always Hunter (deterministic,
+   not random — makes this easy to test repeatably).
+2. Let the next round auto-start after the transition countdown:
+   confirm roles swap (host becomes Hunter, the other player becomes
+   Hider).
+3. Next round: confirm they swap back. Roles alternate every round,
+   never repeating the same assignment twice in a row.
 
 ---
 
-## Round Restart
+## Round Transitions & Rematch
 
-**File:** `Scripts/Autoload/RoundManager.gd` (`request_restart()` /
-`_request_restart()`)
+**File:** `Scripts/Autoload/RoundManager.gd` (`_end_round()` /
+`_on_next_round_delay_elapsed()` / `request_rematch()`)
 
-Either player can request a restart — the "Play Again" button on any
-peer calls `RoundManager.request_restart()`, which RPCs the request to
-the server (`rpc_id(1, ...)`) regardless of who's actually hosting.
-Only the server acts on it, flips the next-Hider (see Team Assignment
-above), and calls `start_round()` again — same code path as the very
-first round, so restart isn't a special case, just a repeat call.
+Rounds chain themselves: when a round ends and the match *isn't* over,
+the server schedules the next round `NEXT_ROUND_DELAY` (5 s) later —
+the HUD counts down the same constant locally, so nothing extra is
+synchronized. The scheduler re-checks the world before firing (peer
+still connected, phase still `ROUND_ENDED`), so a disconnect during the
+breather can't start a broken round.
+
+Once a player reaches `ROUNDS_TO_WIN`, nothing is scheduled — the Game
+Over screen's **Rematch** is the only way forward. Either peer may
+request it (`request_rematch()` → `rpc_id(1, ...)`); the server ignores
+it unless the match is actually over, then resets the score on every
+peer and starts round 1 via the same `start_round()` path as always.
 
 **Testing:**
-1. End a round either way (capture or timeout).
-2. Click "Play Again" from the **losing** player's window. Confirm the
-   round restarts for *both* windows, not just the one that clicked.
-3. Repeat, clicking from the **winning** player's window instead —
-   should work identically (restart isn't gated by who won).
-4. Confirm the round-end panel disappears and both players are moved
-   back to their (swapped) spawn points immediately.
+1. End a round either way (capture or timeout) with the score below
+   match point: confirm the transition panel counts down and the next
+   round starts by itself on *both* windows, roles swapped.
+2. Win a match (3 round wins): confirm Game Over appears on both peers
+   with opposite VICTORY/DEFEAT headlines and no auto-restart.
+3. Click **Rematch** from the **losing** window. Confirm both windows
+   reset to 0–0 and round 1 starts (rematch isn't gated by who won).
 
 ---
 

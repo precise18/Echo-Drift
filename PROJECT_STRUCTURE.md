@@ -65,11 +65,13 @@ Echo Hunt/
 │       └── SpawnManager.gd       Pure logic: spawn-point lookup + player (re)placement
 │
 ├── Materials/                   Shared StandardMaterial3Ds (flat colors + procedural normal maps, see ART_DIRECTION.md)
-├── Assets/
-│   ├── Characters/MovementAnimations.tres  Shared Idle/Walk/Run library (Player + EchoGhost)
-│   └── Environment/NatureKit/    CC0 low-poly dressing props (Kenney — see ART_DIRECTION.md)
-├── UI/Theme/                    Reserved for a shared Theme resource (post-MVP)
-└── Audio/                       Reserved for recorded SFX/music files if synthesis is ever replaced (see AUDIO_SYSTEM.md)
+└── Assets/
+    ├── Characters/MovementAnimations.tres  Shared Idle/Walk/Run library (Player + EchoGhost)
+    └── Environment/NatureKit/    CC0 low-poly dressing props (Kenney — see ART_DIRECTION.md and LICENSES.md)
+
+(There are deliberately no theme or audio asset folders: the UI theme is
+built in code by UIKit — see UI_GUIDE.md — and every sound is
+synthesized at runtime by SoundFactory — see AUDIO_SYSTEM.md.)
 ```
 
 See [`GAMEPLAY_SYSTEMS.md`](GAMEPLAY_SYSTEMS.md) for a full writeup of every
