@@ -12,6 +12,7 @@ Echo Hunt/
 ├── STABILIZATION_REPORT.md
 ├── GAMEPLAY_SYSTEMS.md
 ├── ECHO_SYSTEM.md
+├── NETWORKING_REPORT.md
 │
 ├── Scenes/
 │   ├── Main.tscn               Game root: arena + players + echo system + HUD

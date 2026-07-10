@@ -9,20 +9,31 @@ extends CanvasLayer
 @onready var round_end_panel: PanelContainer = $RoundEndPanel
 @onready var winner_label: Label = $RoundEndPanel/VBoxContainer/WinnerLabel
 @onready var restart_button: Button = $RoundEndPanel/VBoxContainer/RestartButton
+@onready var connection_status_label: Label = $ConnectionStatusLabel
 
 
 func _ready() -> void:
 	round_end_panel.visible = false
+	connection_status_label.visible = false
 	restart_button.pressed.connect(_on_restart_pressed)
 	RoundManager.round_started.connect(_on_round_started)
 	RoundManager.round_ended.connect(_on_round_ended)
 	RoundManager.role_assigned.connect(_on_role_assigned)
+	NetworkManager.reconnect_grace_started.connect(_on_reconnect_grace_started)
+	NetworkManager.reconnect_grace_ended.connect(_on_reconnect_grace_ended)
+
+
+var _grace_deadline := -1.0
 
 
 func _process(_delta: float) -> void:
 	if RoundManager.round_active:
 		var whole_seconds := int(ceil(RoundManager.time_left))
 		timer_label.text = "%02d:%02d" % [whole_seconds / 60, whole_seconds % 60]
+
+	if _grace_deadline > 0.0:
+		var remaining := maxf(_grace_deadline - Time.get_ticks_msec() / 1000.0, 0.0)
+		connection_status_label.text = "Opponent disconnected — waiting %ds to reconnect..." % ceili(remaining)
 
 
 func _on_role_assigned(peer_id: int, role: int) -> void:
@@ -45,3 +56,19 @@ func _on_round_ended(winner_role: int) -> void:
 
 func _on_restart_pressed() -> void:
 	RoundManager.request_restart()
+
+
+func _on_reconnect_grace_started(_role: int) -> void:
+	_grace_deadline = Time.get_ticks_msec() / 1000.0 + NetworkManager.RECONNECT_GRACE_PERIOD
+	connection_status_label.visible = true
+
+
+## Covers both outcomes the same way on purpose: if they reconnected,
+## role_assigned/round_started (from RoundManager's resync) already
+## refresh the rest of the HUD; if the window expired, Main.gd's own
+## listener already called RoundManager.reset_state(), which leaves the
+## HUD in its normal "no active round" appearance. Either way, the only
+## thing this label needs to do is get out of the way.
+func _on_reconnect_grace_ended(_role: int, _reconnected: bool) -> void:
+	_grace_deadline = -1.0
+	connection_status_label.visible = false

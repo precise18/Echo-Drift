@@ -22,6 +22,8 @@ func _ready() -> void:
 	if multiplayer.is_server():
 		NetworkManager.player_connected.connect(_on_peer_connected_server)
 		NetworkManager.player_disconnected.connect(_on_peer_disconnected_server)
+		NetworkManager.player_reconnected.connect(_on_player_reconnected_server)
+		NetworkManager.reconnect_grace_ended.connect(_on_reconnect_grace_ended_server)
 		for id in NetworkManager.connected_peer_ids:
 			_spawn_player(id)
 		_try_start_round()
@@ -32,15 +34,37 @@ func _on_peer_connected_server(id: int) -> void:
 	_try_start_round()
 
 
-## A round can't continue with only one player left, and leaving the old
-## round_active=true in place would permanently block start_round() the
-## next time someone joins. Despawn their body and reset to a clean,
-## restartable state instead.
-func _on_peer_disconnected_server(id: int) -> void:
+## Despawns the departed player's body immediately either way (a stale
+## body left standing in the arena would be confusing and could still
+## trip WinConditions lookups by name collision on reconnect). If a round
+## was in progress, though, don't reset yet — hold their role open for a
+## short window in case they reconnect (see NetworkManager.
+## hold_reconnect_slot / NETWORKING_REPORT.md). If no round was active,
+## there's no state worth preserving, so reset immediately as before.
+func _on_peer_disconnected_server(id: int, session_id: String) -> void:
 	var node := players_container.get_node_or_null(str(id))
 	if node != null:
 		node.queue_free()
-	RoundManager.reset_state()
+
+	if RoundManager.round_active and session_id != "":
+		var role := Role.HIDER if id == RoundManager.hider_id else Role.HUNTER
+		NetworkManager.hold_reconnect_slot(session_id, role)
+	else:
+		RoundManager.reset_state()
+
+
+## A returning session within the grace window: bring their body back
+## and restore their role under their new peer id.
+func _on_player_reconnected_server(peer_id: int, role: int) -> void:
+	_spawn_player(peer_id)
+	RoundManager.reassign_role(peer_id, role)
+
+
+## The grace window ran out without a reconnect — now it's safe to reset,
+## same as the old immediate-reset behavior.
+func _on_reconnect_grace_ended_server(_role: int, reconnected: bool) -> void:
+	if not reconnected:
+		RoundManager.reset_state()
 
 
 func _try_start_round() -> void:

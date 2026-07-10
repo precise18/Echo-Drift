@@ -46,7 +46,7 @@ func _on_timer_expired() -> void:
 	# Every peer's local RoundTimer reaches zero at roughly the same
 	# time (each counts down independently for smooth HUD display), but
 	# only the server's expiry is authoritative for ending the round.
-	if not multiplayer.is_server():
+	if multiplayer.multiplayer_peer == null or not multiplayer.is_server():
 		return
 	_end_round.rpc(Role.HIDER) # time ran out, hider survived
 
@@ -54,7 +54,11 @@ func _on_timer_expired() -> void:
 func _physics_process(_delta: float) -> void:
 	time_left = _timer.time_left
 
-	if not round_active or not multiplayer.is_server():
+	# multiplayer.is_server() logs an error if no peer is assigned at all
+	# (e.g. this peer's own connection just dropped and hasn't finished
+	# tearing down yet) — guard it explicitly rather than spamming the
+	# log every physics frame for however long that window lasts.
+	if not round_active or multiplayer.multiplayer_peer == null or not multiplayer.is_server():
 		return
 
 	_check_for_capture()
@@ -123,10 +127,47 @@ func _request_restart() -> void:
 	start_round()
 
 
+## Called by Main.gd on the server when a disconnected peer reconnects
+## within NetworkManager's grace window. Restores their previous role
+## under their NEW peer id (ENet never reuses peer ids across a
+## reconnect) and re-broadcasts current state to *every* connected peer
+## — not just the reconnecting one — because the peer who stayed
+## connected still has the departed player's OLD id cached in
+## hider_id/hunter_id and needs correcting too.
+func reassign_role(new_peer_id: int, role: int) -> void:
+	if not multiplayer.is_server():
+		return
+	if role == Role.HIDER:
+		hider_id = new_peer_id
+	else:
+		hunter_id = new_peer_id
+	_resync_after_reconnect.rpc(hider_id, hunter_id, round_active, time_left)
+
+
+## Broadcasts whatever the *current* authoritative state actually is
+## (not necessarily "round active" — the round may have ended via
+## timeout while the peer was disconnected, in which case this correctly
+## leaves it inactive rather than forcing a round back open).
+@rpc("authority", "call_local", "reliable")
+func _resync_after_reconnect(synced_hider_id: int, synced_hunter_id: int, active: bool, remaining_time: float) -> void:
+	hider_id = synced_hider_id
+	hunter_id = synced_hunter_id
+	round_active = active
+	time_left = remaining_time
+	if active:
+		_timer.start(remaining_time)
+		role_assigned.emit(hider_id, Role.HIDER)
+		role_assigned.emit(hunter_id, Role.HUNTER)
+		round_started.emit()
+	else:
+		_timer.stop()
+
+
 ## Clears all round state. Called whenever the multiplayer session ends
-## (host lost, disconnected, or a peer left mid-round) so a fresh
-## host/join cycle always starts from a known-good state instead of
-## carrying over a stale round that can never resolve.
+## (host lost, disconnected with no reconnect, or the reconnect grace
+## window expired) so a fresh host/join cycle always starts from a
+## known-good state instead of carrying over a stale round that can
+## never resolve.
 func reset_state() -> void:
 	hider_id = -1
 	hunter_id = -1

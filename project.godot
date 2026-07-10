@@ -84,6 +84,7 @@ sprint={
 [physics]
 
 3d/default_gravity=18.0
+common/physics_interpolation=true
 
 [rendering]
 

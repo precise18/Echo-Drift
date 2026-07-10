@@ -13,6 +13,15 @@ func _ready() -> void:
 	join_button.pressed.connect(_on_join_pressed)
 	NetworkManager.connection_failed.connect(_on_connection_failed)
 
+	# Explains why the player landed back here instead of silently
+	# dumping them at the menu — e.g. after the host disconnected. This
+	# is the practical stand-in for host migration: no seamless handoff,
+	# but a clear reason plus an immediate one-click "Host Game" to start
+	# a fresh session (see NETWORKING_REPORT.md).
+	if NetworkManager.last_disconnect_reason != "":
+		status_label.text = NetworkManager.last_disconnect_reason
+		NetworkManager.last_disconnect_reason = ""
+
 
 func _on_host_pressed() -> void:
 	status_label.text = "Starting host..."

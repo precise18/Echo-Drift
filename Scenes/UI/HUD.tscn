@@ -47,6 +47,20 @@ theme_override_colors/font_color = Color(1, 1, 1, 1)
 text = "Hunter 0 — 0 Hider"
 script = ExtResource("2_scoreboard")
 
+[node name="ConnectionStatusLabel" type="Label" parent="."]
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -260.0
+offset_top = 64.0
+offset_right = 260.0
+offset_bottom = 96.0
+grow_horizontal = 2
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 18
+theme_override_colors/font_color = Color(1, 0.7, 0.3, 1)
+visible = false
+
 [node name="RoundEndPanel" type="PanelContainer" parent="."]
 anchors_preset = 8
 anchor_left = 0.5

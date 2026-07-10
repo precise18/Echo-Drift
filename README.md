@@ -67,6 +67,8 @@ and how it stays free in multiplayer bandwidth:
   echoes/positional audio work, performance notes, and testing steps
 - [`STABILIZATION_REPORT.md`](STABILIZATION_REPORT.md) — bugs found and
   fixed in the reliability pass, remaining known issues, and recommendations
+- [`NETWORKING_REPORT.md`](NETWORKING_REPORT.md) — architecture diagram,
+  reconnect support, bandwidth/latency work, and known limitations
 - [`BEGINNER_GODOT_GUIDE.md`](BEGINNER_GODOT_GUIDE.md) — a from-zero
   walkthrough for someone who has never opened Godot
 
