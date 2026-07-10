@@ -16,6 +16,7 @@ const MAPS := {
 	"echo_chamber": {
 		"name": "Echo Chamber",
 		"scene": "res://Scenes/Maps/EchoChamber.tscn",
+		"description": "A perfectly mirrored arena split by a glowing pool. Every pillar, light and teleport pad has a twin across the mirror line — hunter and hider start as reflections of each other.",
 	},
 }
 const DEFAULT_MAP_ID := "echo_chamber"
@@ -42,6 +43,11 @@ func get_map_ids() -> Array:
 func get_map_name(map_id: String) -> String:
 	var entry: Dictionary = MAPS.get(map_id, MAPS[DEFAULT_MAP_ID])
 	return entry["name"]
+
+
+func get_map_description(map_id: String) -> String:
+	var entry: Dictionary = MAPS.get(map_id, MAPS[DEFAULT_MAP_ID])
+	return entry.get("description", "")
 
 
 ## True once it's safe to call instantiate_selected_map(): always true on

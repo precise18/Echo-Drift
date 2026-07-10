@@ -65,6 +65,7 @@ func host_game() -> Error:
 		return err
 	multiplayer.multiplayer_peer = peer
 	connected_peer_ids = [1] # the host is always peer id 1
+	TransitionScreen.cover("Entering %s..." % MapManager.get_map_name(MapManager.selected_map_id))
 	get_tree().change_scene_to_file(GAME_SCENE)
 	return OK
 
@@ -110,6 +111,9 @@ func _on_connected_to_server() -> void:
 	# connection completes, and needs Main.tscn's MultiplayerSpawner to
 	# already exist to receive it. Main.gd itself waits for the map sync
 	# before instantiating map *content*, which nothing else depends on.
+	# The loading cover paints over this load; it never delays it (see
+	# TransitionScreen.gd).
+	TransitionScreen.cover("Joining match...")
 	get_tree().change_scene_to_file(GAME_SCENE)
 
 
@@ -127,6 +131,25 @@ func _on_server_disconnected() -> void:
 	# silently freezing the game until the app was fully restarted.
 	RoundManager.reset_state()
 	last_disconnect_reason = "Host disconnected."
+	TransitionScreen.cover("Returning to menu...")
+	get_tree().change_scene_to_file(MENU_SCENE)
+
+
+## Deliberately leaving (pause menu -> Leave Match), as opposed to losing
+## the connection: close the peer cleanly, reset session state, and go
+## back to the menu with no "disconnected" explanation banner — the
+## player chose this.
+func leave_game() -> void:
+	if multiplayer.multiplayer_peer != null:
+		multiplayer.multiplayer_peer.close()
+	multiplayer.multiplayer_peer = null
+	connected_peer_ids.clear()
+	_peer_sessions.clear()
+	_disconnected_sessions.clear()
+	RoundManager.reset_state()
+	UIKit.block_mouse_capture = false
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	TransitionScreen.cover("Returning to menu...")
 	get_tree().change_scene_to_file(MENU_SCENE)
 
 

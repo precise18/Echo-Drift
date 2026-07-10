@@ -27,6 +27,8 @@ MatchStateManager="*res://Scripts/Autoload/MatchStateManager.gd"
 RoundManager="*res://Scripts/Autoload/RoundManager.gd"
 MapManager="*res://Scripts/Autoload/MapManager.gd"
 AudioManager="*res://Scripts/Autoload/AudioManager.gd"
+GameSettings="*res://Scripts/Autoload/GameSettings.gd"
+TransitionScreen="*res://Scripts/Autoload/TransitionScreen.gd"
 
 [display]
 

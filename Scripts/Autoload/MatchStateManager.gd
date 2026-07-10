@@ -3,14 +3,15 @@ extends Node
 ## score and which phase the match is currently in — as distinct from
 ## RoundManager, which only ever knows about the *current* round.
 ##
-## This MVP doesn't have a "first to N wins" match-ending rule (the brief
-## calls for endless replayability: "Play again" after every round), so
-## MatchPhase never reaches a terminal "match over" state on its own —
-## but keeping match-level bookkeeping in its own module means that rule
-## could be added later (see GAMEPLAY_SYSTEMS.md) without touching round
-## orchestration at all.
+## A match is first-to-ROUNDS_TO_WIN round wins. Every peer runs this
+## identically off RoundManager's replicated _end_round RPC (which calls
+## record_round_result on all peers via call_local), so the match-over
+## decision needs no synchronization of its own — each peer reaches the
+## same conclusion from the same replicated inputs.
 
-enum MatchPhase { LOBBY, ROUND_ACTIVE, ROUND_ENDED }
+const ROUNDS_TO_WIN := 3
+
+enum MatchPhase { LOBBY, ROUND_ACTIVE, ROUND_ENDED, MATCH_OVER }
 
 signal score_changed(hunter_score: int, hider_score: int)
 signal phase_changed(new_phase: MatchPhase)
@@ -40,14 +41,38 @@ func record_round_result(winner_role: int) -> void:
 		hunter_score += 1
 	else:
 		hider_score += 1
-	_set_phase(MatchPhase.ROUND_ENDED)
+	_set_phase(MatchPhase.MATCH_OVER if is_match_over() else MatchPhase.ROUND_ENDED)
 	score_changed.emit(hunter_score, hider_score)
 
 
+func is_match_over() -> bool:
+	return hunter_score >= ROUNDS_TO_WIN or hider_score >= ROUNDS_TO_WIN
+
+
+## Role.HUNTER / Role.HIDER once the match is decided, Role.NONE before.
+func match_winner_role() -> int:
+	if hunter_score >= ROUNDS_TO_WIN:
+		return Role.HUNTER
+	if hider_score >= ROUNDS_TO_WIN:
+		return Role.HIDER
+	return Role.NONE
+
+
+## 1-based number of the round currently being played (or about to be).
+func round_number() -> int:
+	return hunter_score + hider_score + 1
+
+
+## True while players are in the warm-up lobby (connected, walking
+## around, no round started yet). PlayerController checks this to allow
+## warm-up movement.
+func is_in_lobby() -> bool:
+	return phase == MatchPhase.LOBBY
+
+
 ## Clears score and returns to the lobby phase. Called whenever the
-## multiplayer session itself ends (see RoundManager.reset_state()),
-## since a fresh host/join should start a fresh match, not continue the
-## previous session's score.
+## multiplayer session itself ends (see RoundManager.reset_state()) and
+## on rematch, since both should start from a fresh 0–0.
 func reset() -> void:
 	hunter_score = 0
 	hider_score = 0

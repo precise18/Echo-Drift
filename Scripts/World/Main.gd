@@ -42,7 +42,6 @@ func _ready() -> void:
 		NetworkManager.reconnect_grace_ended.connect(_on_reconnect_grace_ended_server)
 		for id in NetworkManager.connected_peer_ids:
 			_spawn_player(id)
-		_try_start_round()
 
 
 func _load_map() -> void:
@@ -58,9 +57,11 @@ func _on_map_ready(_map_id: String) -> void:
 		_respawn_local_player()
 
 
+## Rounds are no longer auto-started here when the second player arrives
+## — players land in a warm-up lobby and the host presses Start Match
+## (HUD -> RoundManager.start_match). See UI_GUIDE.md.
 func _on_peer_connected_server(id: int) -> void:
 	_spawn_player(id)
-	_try_start_round()
 
 
 ## Despawns the departed player's body immediately either way (a stale
@@ -94,11 +95,6 @@ func _on_player_reconnected_server(peer_id: int, role: int) -> void:
 func _on_reconnect_grace_ended_server(_role: int, reconnected: bool) -> void:
 	if not reconnected:
 		RoundManager.reset_state()
-
-
-func _try_start_round() -> void:
-	if players_container.get_child_count() >= 2 and not RoundManager.round_active:
-		RoundManager.start_round()
 
 
 func _spawn_player(peer_id: int) -> void:

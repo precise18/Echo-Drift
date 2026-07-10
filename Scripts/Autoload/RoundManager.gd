@@ -12,6 +12,7 @@ extends Node
 ## sync. See GAMEPLAY_SYSTEMS.md for the full design writeup.
 
 const ROUND_TIME := 90.0
+const NEXT_ROUND_DELAY := 5.0 # seconds between rounds; HUD shows the same countdown
 
 signal role_assigned(peer_id: int, role: int) # role is a Role.* value
 signal round_started
@@ -82,7 +83,20 @@ func _get_player_node(peer_id: int) -> Node3D:
 	return null
 
 
-## Called by Main.gd on the server once both players exist in the tree.
+## Entry point for the whole match: called on the server when the host
+## presses Start Match in the warm-up lobby (see HUD.gd / UI_GUIDE.md).
+## Subsequent rounds start themselves (see _end_round); this only kicks
+## off round 1.
+func start_match() -> void:
+	if not multiplayer.is_server() or round_active:
+		return
+	if not MatchStateManager.is_in_lobby():
+		return
+	start_round()
+
+
+## Server-only. Requires both players present (RoleManager returns empty
+## otherwise, which safely no-ops).
 func start_round() -> void:
 	if not multiplayer.is_server():
 		return
@@ -112,19 +126,50 @@ func _end_round(winner_role: int) -> void:
 	MatchStateManager.record_round_result(winner_role)
 	round_ended.emit(winner_role)
 
+	# The next round starts itself after a short breather (the HUD shows
+	# the same NEXT_ROUND_DELAY countdown locally — no extra sync needed,
+	# since round_started arrives when the server actually fires). Roles
+	# alternate so both players experience both sides. If the match is
+	# over instead, nothing is scheduled: the Game Over screen's Rematch
+	# is the only way forward (see _request_rematch).
+	if multiplayer.multiplayer_peer != null and multiplayer.is_server() and not MatchStateManager.is_match_over():
+		_next_hider_id = hunter_id
+		get_tree().create_timer(NEXT_ROUND_DELAY).timeout.connect(_on_next_round_delay_elapsed)
 
-## Called locally by HUD on any peer; forwards the request to the server.
-func request_restart() -> void:
-	_request_restart.rpc_id(1)
+
+## Everything can change during the 5-second breather — a peer can drop
+## (reset_state clears the session back to lobby), a reconnect can be in
+## grace — so re-check the world before actually starting.
+func _on_next_round_delay_elapsed() -> void:
+	if multiplayer.multiplayer_peer == null or not multiplayer.is_server():
+		return
+	if round_active or MatchStateManager.phase != MatchStateManager.MatchPhase.ROUND_ENDED:
+		return
+	if NetworkManager.connected_peer_ids.size() < 2:
+		return
+	start_round()
+
+
+## Called locally by HUD's Game Over screen on any peer; forwards the
+## request to the server.
+func request_rematch() -> void:
+	_request_rematch.rpc_id(1)
 
 
 @rpc("any_peer", "call_local", "reliable")
-func _request_restart() -> void:
-	if not multiplayer.is_server():
+func _request_rematch() -> void:
+	if not multiplayer.is_server() or not MatchStateManager.is_match_over():
 		return
-	# Alternate who hides next so both players experience both roles.
-	_next_hider_id = hunter_id
+	# Both RPCs are reliable and ordered, so every peer resets to 0–0
+	# before the new round-1 state lands.
+	_reset_match.rpc()
+	_next_hider_id = -1
 	start_round()
+
+
+@rpc("authority", "call_local", "reliable")
+func _reset_match() -> void:
+	MatchStateManager.reset()
 
 
 ## Called by Main.gd on the server when a disconnected peer reconnects

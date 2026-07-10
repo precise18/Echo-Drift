@@ -57,6 +57,10 @@ func _exit_tree() -> void:
 
 
 func _capture_mouse() -> void:
+	# A HUD overlay that needs the cursor (pause menu, game over) wins:
+	# don't steal the mouse back on window refocus while one is open.
+	if UIKit.block_mouse_capture:
+		return
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
 
@@ -68,16 +72,17 @@ func _refresh_role_material() -> void:
 	body_mesh.material_override = HUNTER_MATERIAL if peer_id == RoundManager.hunter_id else HIDER_MATERIAL
 
 
+## ESC is no longer handled here — the HUD's pause menu owns it (and
+## owns Input.mouse_mode while open). Mouse-look is naturally inert while
+## paused because the mouse isn't captured then.
 func _unhandled_input(event: InputEvent) -> void:
 	if not is_multiplayer_authority():
 		return
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
-		camera_pivot.rotate_y(-event.relative.x * MOUSE_SENSITIVITY)
-		_camera_pitch = clampf(_camera_pitch - event.relative.y * MOUSE_SENSITIVITY, PITCH_MIN, PITCH_MAX)
+		var sensitivity := MOUSE_SENSITIVITY * GameSettings.mouse_sensitivity
+		camera_pivot.rotate_y(-event.relative.x * sensitivity)
+		_camera_pitch = clampf(_camera_pitch - event.relative.y * sensitivity, PITCH_MIN, PITCH_MAX)
 		spring_arm.rotation.x = _camera_pitch
-	elif event.is_action_pressed("ui_cancel"):
-		var capturing := Input.mouse_mode == Input.MOUSE_MODE_CAPTURED
-		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if capturing else Input.MOUSE_MODE_CAPTURED
 
 
 func _physics_process(delta: float) -> void:
@@ -89,7 +94,11 @@ func _physics_process(delta: float) -> void:
 	else:
 		velocity.y -= _gravity * delta
 
-	if RoundManager.round_active:
+	# Movement is allowed during the round and during the warm-up lobby
+	# (players explore the arena while waiting for the host to start);
+	# it locks only between rounds and on the game-over screen, so nobody
+	# repositions during a transition.
+	if RoundManager.round_active or MatchStateManager.is_in_lobby():
 		_handle_movement_input(delta)
 	else:
 		velocity.x = move_toward(velocity.x, 0.0, GROUND_ACCEL * delta)

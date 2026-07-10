@@ -1,70 +1,238 @@
 extends Control
-## Single responsibility: translate menu button presses into
-## NetworkManager calls and surface connection errors to the player.
+## The menu shell: a router over five screens — Title, Host (with map
+## selection), Join, Settings, Credits — all built in code from UIKit
+## pieces so every screen shares the same theme, spacing, and button
+## feel. Only one screen is visible at a time; ESC returns to the title
+## from anywhere. See UI_GUIDE.md.
 
-@onready var ip_field: LineEdit = $CenterContainer/VBoxContainer/IPField
-@onready var status_label: Label = $CenterContainer/VBoxContainer/StatusLabel
-@onready var host_button: Button = $CenterContainer/VBoxContainer/HostButton
-@onready var join_button: Button = $CenterContainer/VBoxContainer/JoinButton
-@onready var map_option_button: OptionButton = $CenterContainer/VBoxContainer/MapRow/MapOptionButton
+var _screens: Dictionary = {}
+var _current_screen := ""
+
+# Title screen notice (e.g. "Host disconnected." after being dropped).
+var _notice_label: Label
+
+# Host screen state.
+var _selected_map_id: String = MapManager.DEFAULT_MAP_ID
+var _map_description: Label
+
+# Join screen state.
+var _ip_field: LineEdit
+var _join_button: Button
+var _join_status: Label
 
 
 func _ready() -> void:
-	host_button.pressed.connect(_on_host_pressed)
-	join_button.pressed.connect(_on_join_pressed)
-	NetworkManager.connection_failed.connect(_on_connection_failed)
-	_populate_map_options()
+	theme = UIKit.theme()
+	# Arriving here from a game (leave/disconnect) with the mouse still
+	# captured would leave the menu unclickable.
+	UIKit.block_mouse_capture = false
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 
-	for button in [host_button, join_button]:
-		button.pressed.connect(AudioManager.play_click)
-		button.mouse_entered.connect(AudioManager.play_hover)
-	map_option_button.item_selected.connect(func(_index: int) -> void: AudioManager.play_click())
+	var background := ColorRect.new()
+	background.color = UIKit.COLOR_BACKGROUND
+	background.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(background)
+
+	_screens["title"] = _build_title_screen()
+	_screens["host"] = _build_host_screen()
+	_screens["join"] = _build_join_screen()
+	_screens["settings"] = _build_settings_screen()
+	_screens["credits"] = _build_credits_screen()
+	for screen: Control in _screens.values():
+		add_child(screen)
+	_show_screen("title")
+
+	NetworkManager.connection_failed.connect(_on_connection_failed)
 
 	# Explains why the player landed back here instead of silently
 	# dumping them at the menu — e.g. after the host disconnected. This
 	# is the practical stand-in for host migration: no seamless handoff,
-	# but a clear reason plus an immediate one-click "Host Game" to start
-	# a fresh session (see NETWORKING_REPORT.md).
+	# but a clear reason plus an immediate one-click path to a fresh
+	# session (see NETWORKING_REPORT.md).
 	if NetworkManager.last_disconnect_reason != "":
-		status_label.text = NetworkManager.last_disconnect_reason
+		_notice_label.text = NetworkManager.last_disconnect_reason
 		NetworkManager.last_disconnect_reason = ""
 
 
-## Only the host's selection matters (a joining client learns the active
-## map from the host automatically — see MapManager/NETWORKING_REPORT.md)
-## but the list is built from MapManager.get_map_ids() either way, so
-## adding a new map later only means updating MapManager's registry —
-## this menu never needs to change.
-func _populate_map_options() -> void:
-	map_option_button.clear()
-	for map_id in MapManager.get_map_ids():
-		map_option_button.add_item(MapManager.get_map_name(map_id))
-		map_option_button.set_item_metadata(map_option_button.item_count - 1, map_id)
-	var default_index := 0
-	for i in map_option_button.item_count:
-		if map_option_button.get_item_metadata(i) == MapManager.DEFAULT_MAP_ID:
-			default_index = i
-			break
-	map_option_button.select(default_index)
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("ui_cancel") and _current_screen != "title":
+		AudioManager.play_click()
+		_show_screen("title")
 
 
-func _on_host_pressed() -> void:
-	var selected_index := map_option_button.selected
-	if selected_index >= 0:
-		MapManager.set_selected_map(map_option_button.get_item_metadata(selected_index))
+func _show_screen(name: String) -> void:
+	_current_screen = name
+	for key: String in _screens:
+		_screens[key].visible = key == name
 
-	status_label.text = "Starting host..."
+
+# ---------------------------------------------------------------------------
+# Screens
+# ---------------------------------------------------------------------------
+
+func _build_title_screen() -> Control:
+	var root := CenterContainer.new()
+	root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 12)
+	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	root.add_child(vbox)
+
+	vbox.add_child(UIKit.make_title("ECHO HUNT", 58))
+	vbox.add_child(UIKit.make_paragraph("Every move you make becomes a living echo.\nHunt by sound and ghost trails — or use your own past to deceive.", 15))
+	vbox.add_child(_spacer(18))
+
+	var buttons := {
+		"Host Game": func() -> void: _show_screen("host"),
+		"Join Game": func() -> void: _show_screen("join"),
+		"Settings": func() -> void: _show_screen("settings"),
+		"Credits": func() -> void: _show_screen("credits"),
+	}
+	for label: String in buttons:
+		var button := UIKit.make_button(label)
+		button.pressed.connect(buttons[label])
+		vbox.add_child(button)
+
+	var quit := UIKit.make_button("Quit")
+	quit.pressed.connect(func() -> void: get_tree().quit())
+	vbox.add_child(quit)
+
+	vbox.add_child(_spacer(10))
+	_notice_label = UIKit.make_title("", 15, UIKit.COLOR_GOLD)
+	vbox.add_child(_notice_label)
+	vbox.add_child(UIKit.make_title("2-player LAN  •  built with Godot", 12, UIKit.COLOR_MUTED))
+	return root
+
+
+func _build_host_screen() -> Control:
+	var screen := _build_dialog_screen("HOST A MATCH")
+	var content: VBoxContainer = screen["content"]
+
+	content.add_child(UIKit.make_title("Choose the arena", 15, UIKit.COLOR_MUTED))
+
+	# Radio-style map list driven entirely by MapManager's registry — a
+	# future map appears here with no menu changes.
+	var group := ButtonGroup.new()
+	for map_id: String in MapManager.get_map_ids():
+		var map_button := UIKit.make_button(MapManager.get_map_name(map_id))
+		map_button.toggle_mode = true
+		map_button.button_group = group
+		map_button.button_pressed = map_id == _selected_map_id
+		map_button.pressed.connect(func() -> void:
+			_selected_map_id = map_id
+			_map_description.text = MapManager.get_map_description(map_id))
+		content.add_child(map_button)
+
+	_map_description = UIKit.make_paragraph(MapManager.get_map_description(_selected_map_id), 14)
+	content.add_child(_map_description)
+	content.add_child(_spacer(6))
+	content.add_child(UIKit.make_title("Your opponent joins with your LAN IP, port %d" % NetworkManager.PORT, 13, UIKit.COLOR_MUTED))
+
+	var start := UIKit.make_button("Start Hosting")
+	start.pressed.connect(_on_start_hosting_pressed)
+	content.add_child(start)
+	content.add_child(_make_back_button())
+	return screen["root"]
+
+
+func _build_join_screen() -> Control:
+	var screen := _build_dialog_screen("JOIN A MATCH")
+	var content: VBoxContainer = screen["content"]
+
+	content.add_child(UIKit.make_title("Enter the host's LAN IP address", 15, UIKit.COLOR_MUTED))
+
+	_ip_field = LineEdit.new()
+	_ip_field.text = GameSettings.last_join_ip
+	_ip_field.placeholder_text = "e.g. 192.168.1.20"
+	_ip_field.alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_ip_field.custom_minimum_size = Vector2(280, 44)
+	_ip_field.text_submitted.connect(func(_text: String) -> void: _on_join_pressed())
+	content.add_child(_ip_field)
+
+	_join_button = UIKit.make_button("Join")
+	_join_button.pressed.connect(_on_join_pressed)
+	content.add_child(_join_button)
+
+	_join_status = UIKit.make_title("", 14, UIKit.COLOR_GOLD)
+	content.add_child(_join_status)
+	content.add_child(_make_back_button())
+	return screen["root"]
+
+
+func _build_settings_screen() -> Control:
+	var screen := _build_dialog_screen("SETTINGS")
+	var content: VBoxContainer = screen["content"]
+	content.add_child(SettingsPanel.new())
+	content.add_child(_spacer(6))
+	content.add_child(_make_back_button())
+	return screen["root"]
+
+
+func _build_credits_screen() -> Control:
+	var screen := _build_dialog_screen("CREDITS")
+	var content: VBoxContainer = screen["content"]
+	content.add_child(UIKit.make_paragraph("Echo Hunt — a 3D multiplayer hide-and-seek game where every player's past movements become living echoes.", 15, UIKit.COLOR_TEXT))
+	content.add_child(_spacer(4))
+	content.add_child(UIKit.make_title("ENVIRONMENT PROPS", 13, UIKit.COLOR_ACCENT))
+	content.add_child(UIKit.make_paragraph("\"Nature Kit\" by Kenney (kenney.nl) — CC0, via OpenGameArt.org", 14))
+	content.add_child(UIKit.make_title("AUDIO", 13, UIKit.COLOR_ACCENT))
+	content.add_child(UIKit.make_paragraph("All music and sound effects are synthesized at runtime — no recorded assets.", 14))
+	content.add_child(UIKit.make_title("MADE WITH", 13, UIKit.COLOR_ACCENT))
+	content.add_child(UIKit.make_paragraph("Godot Engine 4 — godotengine.org", 14))
+	content.add_child(_spacer(4))
+	content.add_child(_make_back_button())
+	return screen["root"]
+
+
+# ---------------------------------------------------------------------------
+# Actions
+# ---------------------------------------------------------------------------
+
+func _on_start_hosting_pressed() -> void:
+	MapManager.set_selected_map(_selected_map_id)
 	var err := NetworkManager.host_game()
 	if err != OK:
-		status_label.text = "Could not host game (error %d). Is the port already in use?" % err
+		_notice_label.text = "Could not host (error %d). Is the port already in use?" % err
+		_show_screen("title")
 
 
 func _on_join_pressed() -> void:
-	status_label.text = "Connecting..."
-	var err := NetworkManager.join_game(ip_field.text.strip_edges())
+	var address := _ip_field.text.strip_edges()
+	GameSettings.set_last_join_ip(address)
+	_join_status.text = "Connecting to %s..." % (address if address != "" else "127.0.0.1")
+	_join_button.disabled = true
+	var err := NetworkManager.join_game(address)
 	if err != OK:
-		status_label.text = "Could not join game (error %d)." % err
+		_join_status.text = "Could not start connecting (error %d)." % err
+		_join_button.disabled = false
 
 
 func _on_connection_failed() -> void:
-	status_label.text = "Connection failed. Check the IP address and that the host is running."
+	_join_status.text = "Connection failed. Check the IP and that the host is running."
+	_join_button.disabled = false
+
+
+# ---------------------------------------------------------------------------
+# Shared pieces
+# ---------------------------------------------------------------------------
+
+## Every non-title screen is the same shape: a centered themed panel with
+## a heading and a content column.
+func _build_dialog_screen(title: String) -> Dictionary:
+	var panel := UIKit.make_panel(12)
+	var content: VBoxContainer = panel["content"]
+	content.add_child(UIKit.make_title(title, 30))
+	content.add_child(_spacer(4))
+	return {"root": panel["root"], "content": content}
+
+
+func _make_back_button() -> Button:
+	var back := UIKit.make_button("Back")
+	back.pressed.connect(func() -> void: _show_screen("title"))
+	return back
+
+
+func _spacer(height: float) -> Control:
+	var spacer := Control.new()
+	spacer.custom_minimum_size = Vector2(0, height)
+	return spacer

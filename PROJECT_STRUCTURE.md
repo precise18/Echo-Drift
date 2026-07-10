@@ -32,7 +32,9 @@ Echo Hunt/
 │   │   ├── RoundManager.gd       Orchestrates one round: roles, timer, win checks, restart
 │   │   ├── MatchStateManager.gd  Cumulative score + match phase across rounds
 │   │   ├── MapManager.gd         Map registry + network-synced map selection
-│   │   └── AudioManager.gd       Buses, music/ambience beds, UI sounds, round stings (see AUDIO_SYSTEM.md)
+│   │   ├── AudioManager.gd       Buses, music/ambience beds, UI sounds, round stings (see AUDIO_SYSTEM.md)
+│   │   ├── GameSettings.gd       Persistent player prefs: volumes, sensitivity, fullscreen (user://settings.cfg)
+│   │   └── TransitionScreen.gd   Loading-screen cover for scene changes (see UI_GUIDE.md)
 │   ├── Audio/
 │   │   ├── SoundFactory.gd       Synthesizes + caches every sound as AudioStreamWAV (no audio files)
 │   │   └── FootstepEmitter.gd    Positional footsteps derived from observed movement (players + ghosts)
@@ -53,8 +55,10 @@ Echo Hunt/
 │   │   ├── EchoGhost.gd          Renders the buffer at a configurable delay, replays animation
 │   │   └── EchoAudio.gd          Procedural positional audio cue for one ghost
 │   ├── UI/
-│   │   ├── MainMenu.gd          Wires menu buttons + map selector to NetworkManager/MapManager
-│   │   ├── HUD.gd                Reflects RoundManager state on screen (timer/role/round-end)
+│   │   ├── UIKit.gd              Shared procedural Theme + widget factories — the one visual language (see UI_GUIDE.md)
+│   │   ├── MainMenu.gd           Router: Title / Host / Join / Settings / Credits screens
+│   │   ├── HUD.gd                In-game UI: top bar, lobby, round banners/transitions, pause, game over
+│   │   ├── SettingsPanel.gd      Reusable settings controls (menu + pause both embed it)
 │   │   └── Scoreboard.gd         Reflects MatchStateManager score on screen
 │   └── World/
 │       ├── Main.gd               Loads the selected map, spawns players, wires echo target
