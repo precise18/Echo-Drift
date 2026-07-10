@@ -13,28 +13,34 @@ Echo Hunt/
 ├── GAMEPLAY_SYSTEMS.md
 ├── ECHO_SYSTEM.md
 ├── NETWORKING_REPORT.md
+├── MAP_SYSTEM.md
 │
 ├── Scenes/
-│   ├── Main.tscn               Game root: arena + players + echo system + HUD
+│   ├── Main.tscn               Game root: map container + players + echo system + HUD
 │   ├── UI/
-│   │   ├── MainMenu.tscn        Host / Join screen
+│   │   ├── MainMenu.tscn        Host / Join screen + map selector
 │   │   └── HUD.tscn             In-round timer / role / round-end panel (Scoreboard lives here too)
 │   ├── Player/
 │   │   ├── Player.tscn          Third-person character (CharacterBody3D)
 │   │   └── EchoGhost.tscn       Transparent, collision-less echo replay (animation + positional audio)
 │   └── Maps/
-│       └── Arena.tscn           MVP's single map (forest-styled arena)
+│       └── EchoChamber.tscn     The MVP's map: symmetric, reflection-themed (see MAP_SYSTEM.md)
 │
 ├── Scripts/
 │   ├── Autoload/
 │   │   ├── NetworkManager.gd     Host / join — ENet connection lifecycle only
 │   │   ├── RoundManager.gd       Orchestrates one round: roles, timer, win checks, restart
-│   │   └── MatchStateManager.gd  Cumulative score + match phase across rounds
+│   │   ├── MatchStateManager.gd  Cumulative score + match phase across rounds
+│   │   └── MapManager.gd         Map registry + network-synced map selection
 │   ├── Gameplay/
 │   │   ├── Role.gd               Shared HIDER/HUNTER/NONE identifier
 │   │   ├── RoleManager.gd        Pure logic: who hides/hunts next (team assignment)
 │   │   ├── RoundTimer.gd         Reusable countdown component
 │   │   └── WinConditions.gd      Pure logic: capture / timeout checks
+│   ├── Maps/
+│   │   ├── MapKit.gd             Reusable static builders every map is made from
+│   │   ├── TeleportPad.gd        Self-contained linked-pair teleport component
+│   │   └── EchoChamber.gd        The MVP map, built entirely from MapKit
 │   ├── Player/
 │   │   └── PlayerController.gd  Input, movement, camera, placeholder animation
 │   ├── Echo/
@@ -43,14 +49,14 @@ Echo Hunt/
 │   │   ├── EchoGhost.gd          Renders the buffer at a configurable delay, replays animation
 │   │   └── EchoAudio.gd          Procedural positional audio cue for one ghost
 │   ├── UI/
-│   │   ├── MainMenu.gd          Wires menu buttons to NetworkManager
+│   │   ├── MainMenu.gd          Wires menu buttons + map selector to NetworkManager/MapManager
 │   │   ├── HUD.gd                Reflects RoundManager state on screen (timer/role/round-end)
 │   │   └── Scoreboard.gd         Reflects MatchStateManager score on screen
 │   └── World/
-│       ├── Main.gd               Spawns players, wires echo target, triggers respawns
+│       ├── Main.gd               Loads the selected map, spawns players, wires echo target
 │       └── SpawnManager.gd       Pure logic: spawn-point lookup + player (re)placement
 │
-├── Materials/                   StandardMaterial3D placeholders (flat colors)
+├── Materials/                   StandardMaterial3D placeholders (flat colors), shared across maps
 ├── Assets/
 │   ├── Characters/MovementAnimations.tres  Shared Idle/Walk/Run library (Player + EchoGhost)
 │   └── Environment/              Empty placeholder folder for future art
@@ -59,10 +65,9 @@ Echo Hunt/
 ```
 
 See [`GAMEPLAY_SYSTEMS.md`](GAMEPLAY_SYSTEMS.md) for a full writeup of every
-round/match system — responsibilities, APIs, signals, and per-system
-testing steps — and [`ECHO_SYSTEM.md`](ECHO_SYSTEM.md) for the same
-treatment of the echo/ghost mechanic specifically. This file stays
-focused on overall project layout.
+round/match system, [`ECHO_SYSTEM.md`](ECHO_SYSTEM.md) for the echo/ghost
+mechanic, and [`MAP_SYSTEM.md`](MAP_SYSTEM.md) for the map kit and how to
+add a new map. This file stays focused on overall project layout.
 
 ## Script responsibilities (one job each)
 
@@ -75,6 +80,9 @@ focused on overall project layout.
 | `RoundTimer.gd` | Counting down and announcing expiry | Deciding what expiry *means* |
 | `WinConditions.gd` | Pure functions: is this a capture? is this a timeout? | Acting on the answer |
 | `SpawnManager.gd` | Pure functions: where is this role's spawn point; move a body there | Deciding *when* to respawn |
+| `MapManager.gd` | Map registry, active selection, syncing that selection to a joining client | Building map content itself |
+| `MapKit.gd` | Pure functions: build a ground/wall/pillar/obstacle/light/spawn point, bake navigation | Deciding a map's *layout* |
+| `TeleportPad.gd` | Teleporting a body to its linked pad on entry | Deciding *where* pads go |
 | `PlayerController.gd` | Reading input and moving *its own* body; ignores input for bodies it doesn't own | Networking, round rules |
 | `EchoSystem.gd` | Owning one recorder + N ghosts for one target; the only echo API `Main.gd` talks to | Recording/rendering details |
 | `EchoRecorder.gd` | Buffering one target's transform + animation history | Deciding *who* the target is, rendering |
@@ -118,11 +126,11 @@ wading through RPC/networking code at all.
 
 Per the project brief, none of the following are built, and none should
 be added until the MVP is validated as fun: AI/bots, checkpoints,
-minimap, voice chat, inventory, crafting, multiple playable maps, skins,
-cosmetics, settings menu, login, database, cloud saves, achievements,
-progression systems, matchmaking, dedicated servers, advanced VFX.
+minimap, voice chat, inventory, crafting, skins, cosmetics, settings
+menu, login, database, cloud saves, achievements, progression systems,
+matchmaking, dedicated servers, advanced VFX.
 
-`Scenes/Maps/` and `Assets/` are structured so a post-MVP pass can add
-Forest/Dungeon/Laboratory/Castle maps and real art without refactoring
-gameplay code — see [`Assets/README.md`](Assets/README.md) — but only one
-arena ships in this MVP.
+The map system (see [`MAP_SYSTEM.md`](MAP_SYSTEM.md)) is built to take
+on more maps (Dungeon, Laboratory, Castle) without touching its
+architecture — adding one is a registry entry plus a new `MapKit`-built
+scene — but only one map, Echo Chamber, ships now.

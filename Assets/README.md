@@ -4,7 +4,11 @@ The MVP uses **procedural placeholder geometry only** (Godot primitive
 meshes — capsules, cylinders, boxes, spheres — with flat `StandardMaterial3D`
 colors in `res://Materials/`). No external art files are required to run
 the project, which keeps the repository small and license-clean while the
-core loop is being validated.
+core loop is being validated. This also extends to audio (see
+`Scripts/Echo/EchoAudio.gd`, which synthesizes its tone at runtime rather
+than requiring a sound file) and maps (see `Scripts/Maps/MapKit.gd`,
+which builds every map from shared procedural pieces — see
+`MAP_SYSTEM.md`).
 
 ## Art direction target
 
@@ -20,7 +24,7 @@ placeholders with free/openly-licensed packs and drop them here:
 | Folder | Contents |
 |---|---|
 | `Assets/Characters/` | Kenney "Toon Characters" / Quaternius character packs (replaces `Scenes/Player/Player.tscn`'s capsule mesh + adds a real skeleton/animations for `AnimPlayer`) |
-| `Assets/Environment/` | Kenney "Nature Kit" / "Prototype Kit" / "Dungeon Kit", Quaternius "Low Poly Nature" / "Dungeon" / "Castle" (replaces `Scenes/Maps/Arena.tscn` primitives) |
+| `Assets/Environment/` | Kenney "Nature Kit" / "Prototype Kit" / "Dungeon Kit", Quaternius "Low Poly Nature" / "Dungeon" / "Castle" (replaces `MapKit`'s procedural meshes/materials theme-by-theme) |
 
 Preferred sources, in priority order: **Kenney.nl**, **Quaternius**,
 **Poly Pizza**, **OpenGameArt** (audio/SFX). Only use assets with licenses
@@ -29,9 +33,11 @@ add copyrighted or unlicensed files.
 
 ## Multiple maps (post-MVP)
 
-`Scenes/Maps/` is intentionally a folder, not a single hardcoded path, so
-additional arenas (Forest / Dungeon / Laboratory / Castle) can be added as
-sibling `.tscn` files later. They should each expose a `hider_spawn` and
-`hunter_spawn` group `Marker3D`, exactly like `Arena.tscn`, so they drop
-into `Main.tscn` without any script changes. The MVP intentionally ships
-with only one arena (`Arena.tscn`, forest-themed) to keep scope small.
+The map system (`MapManager` + `MapKit`, see `MAP_SYSTEM.md`) is already
+built to take on more maps — adding one is a registry entry in
+`MapManager.MAPS` plus a new `Scenes/Maps/<Name>.tscn` /
+`Scripts/Maps/<Name>.gd` pair built from `MapKit` pieces, each exposing a
+`hider_spawn` and `hunter_spawn` group `Marker3D`. The MVP intentionally
+ships with only one map (`EchoChamber.tscn`) to keep scope small; Dungeon,
+Laboratory, and Castle (per the original brief) are natural next additions
+using the exact same pattern.

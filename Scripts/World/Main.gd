@@ -1,17 +1,32 @@
 extends Node3D
-## Game root: wires together the arena, player spawning, and the echo
+## Game root: wires together the map, player spawning, and the echo
 ## system. Round/match decisions live in RoundManager/MatchStateManager;
-## spawn placement logic lives in SpawnManager; this script only connects
-## the scene tree to those systems.
+## spawn placement logic lives in SpawnManager; which map to load lives
+## in MapManager — this script only connects the scene tree to those
+## systems.
 
 const PLAYER_SCENE := preload("res://Scenes/Player/Player.tscn")
 
+@onready var map_container: Node3D = $MapContainer
 @onready var players_container: Node3D = $Players
 @onready var spawner: MultiplayerSpawner = $MultiplayerSpawner
 @onready var echo_system: EchoSystem = $EchoSystem
 
 
 func _ready() -> void:
+	# The server always knows its own map choice immediately; a client
+	# might still be waiting on MapManager's sync RPC (which is
+	# deliberately independent of scene-load timing — see MapManager.
+	# is_map_ready() and NETWORKING_REPORT.md). Either way, map *content*
+	# loading never blocks the rest of this scene from being ready
+	# (Players/MultiplayerSpawner must exist immediately regardless, so
+	# Godot's own spawner replication for already-spawned nodes has
+	# somewhere to land).
+	if MapManager.is_map_ready():
+		_load_map()
+	else:
+		MapManager.map_selected.connect(_on_map_ready, CONNECT_ONE_SHOT)
+
 	RoundManager.register_players_container(players_container)
 
 	spawner.spawned.connect(_on_node_spawned)
@@ -27,6 +42,19 @@ func _ready() -> void:
 		for id in NetworkManager.connected_peer_ids:
 			_spawn_player(id)
 		_try_start_round()
+
+
+func _load_map() -> void:
+	map_container.add_child(MapManager.instantiate_selected_map())
+
+
+func _on_map_ready(_map_id: String) -> void:
+	_load_map()
+	# A round may already have started (round_started arrived) while we
+	# were still waiting on the map sync — SpawnManager needs the map's
+	# spawn markers to exist, so retry the respawn now that they do.
+	if RoundManager.round_active:
+		_respawn_local_player()
 
 
 func _on_peer_connected_server(id: int) -> void:
@@ -102,7 +130,11 @@ func _on_role_assigned(peer_id: int, role: int) -> void:
 
 
 func _on_round_started() -> void:
-	_respawn_local_player()
+	# If the map hasn't loaded yet (client still waiting on MapManager's
+	# sync RPC), _on_map_ready() will retry this once it has — spawn
+	# markers wouldn't exist to place the player at yet anyway.
+	if MapManager.is_map_ready():
+		_respawn_local_player()
 
 
 ## Stops the echo(es) the instant the round ends, rather than letting a

@@ -1,14 +1,13 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://Scripts/World/Main.gd" id="1_main"]
-[ext_resource type="PackedScene" path="res://Scenes/Maps/Arena.tscn" id="2_arena"]
 [ext_resource type="Script" path="res://Scripts/Echo/EchoSystem.gd" id="3_echosystem"]
 [ext_resource type="PackedScene" path="res://Scenes/UI/HUD.tscn" id="4_hud"]
 
 [node name="Main" type="Node3D"]
 script = ExtResource("1_main")
 
-[node name="Arena" parent="." instance=ExtResource("2_arena")]
+[node name="MapContainer" type="Node3D" parent="."]
 
 [node name="Players" type="Node3D" parent="."]
 

@@ -229,7 +229,7 @@ first round, so restart isn't a special case, just a repeat call.
 **File:** `Scripts/World/SpawnManager.gd` (static, no state)
 
 Looks up the current map's spawn points (`Marker3D` nodes in the
-`hider_spawn` / `hunter_spawn` groups — see `Arena.tscn`) and places a
+`hider_spawn` / `hunter_spawn` groups — see `MAP_SYSTEM.md`) and places a
 player body there. `Main.gd` calls `SpawnManager.respawn_player()` for
 the *local* player only, whenever `RoundManager.round_started` fires —
 each peer only ever moves the body it has multiplayer authority over;

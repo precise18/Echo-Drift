@@ -6,12 +6,14 @@ extends Control
 @onready var status_label: Label = $CenterContainer/VBoxContainer/StatusLabel
 @onready var host_button: Button = $CenterContainer/VBoxContainer/HostButton
 @onready var join_button: Button = $CenterContainer/VBoxContainer/JoinButton
+@onready var map_option_button: OptionButton = $CenterContainer/VBoxContainer/MapRow/MapOptionButton
 
 
 func _ready() -> void:
 	host_button.pressed.connect(_on_host_pressed)
 	join_button.pressed.connect(_on_join_pressed)
 	NetworkManager.connection_failed.connect(_on_connection_failed)
+	_populate_map_options()
 
 	# Explains why the player landed back here instead of silently
 	# dumping them at the menu — e.g. after the host disconnected. This
@@ -23,7 +25,29 @@ func _ready() -> void:
 		NetworkManager.last_disconnect_reason = ""
 
 
+## Only the host's selection matters (a joining client learns the active
+## map from the host automatically — see MapManager/NETWORKING_REPORT.md)
+## but the list is built from MapManager.get_map_ids() either way, so
+## adding a new map later only means updating MapManager's registry —
+## this menu never needs to change.
+func _populate_map_options() -> void:
+	map_option_button.clear()
+	for map_id in MapManager.get_map_ids():
+		map_option_button.add_item(MapManager.get_map_name(map_id))
+		map_option_button.set_item_metadata(map_option_button.item_count - 1, map_id)
+	var default_index := 0
+	for i in map_option_button.item_count:
+		if map_option_button.get_item_metadata(i) == MapManager.DEFAULT_MAP_ID:
+			default_index = i
+			break
+	map_option_button.select(default_index)
+
+
 func _on_host_pressed() -> void:
+	var selected_index := map_option_button.selected
+	if selected_index >= 0:
+		MapManager.set_selected_map(map_option_button.get_item_metadata(selected_index))
+
 	status_label.text = "Starting host..."
 	var err := NetworkManager.host_game()
 	if err != OK:

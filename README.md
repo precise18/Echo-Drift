@@ -1,9 +1,16 @@
 # Echo Hunt (MVP)
 
-A 3D multiplayer hide-and-seek prototype built around an **echo /
-reflection** mechanic: the Hider's movement is continuously recorded, and
-a translucent "echo ghost" replays it 10 seconds later — giving the Hunter
-a trail to follow that is always slightly out of date.
+Echo Hunt is a 3D multiplayer hide-and-seek game where every player's
+past movements become living echoes. Hunters track echoes through sound
+and ghost trails, while Hiders can deliberately move to leave misleading
+trails for their future self to play back. The result is a simple but
+replayable game where your own history becomes your greatest advantage
+— or your biggest mistake.
+
+Mechanically: the Hider's movement is continuously recorded, and a
+translucent "echo ghost" replays it 10 seconds later — complete with
+animation and a positional audio cue — giving the Hunter a trail to
+follow that is always slightly out of date.
 
 This is a **minimum viable product**. Its only job is to prove the core
 loop is fun: host, join, spawn, hide, leave a trail, follow the trail,
@@ -33,11 +40,22 @@ Never used Godot before? Start with
 ## Core game loop
 
 ```
-Main Menu → Host or Join → Players Spawn → Hider Hides
+Main Menu → Select Map → Host or Join → Players Spawn → Hider Hides
    → Echo System Records Movement → Echo Ghost Appears (after 10s)
    → Hunter Tracks Echo → Hunter Finds Hider → Round Ends
    → Score Updates → Play Again
 ```
+
+## The map
+
+Echo Hunt ships one map, **Echo Chamber** — a bilaterally symmetric
+arena built around the game's own theme: a central reflective pool sits
+on the mirror line, the Hider and Hunter spawn as literal reflections of
+each other, and a linked pair of teleport pads let you step through the
+mirror to the other side. Maps are built from a shared, reusable
+primitive kit and are selectable before hosting (currently a
+one-item menu, architected for more). Full writeup:
+[`MAP_SYSTEM.md`](MAP_SYSTEM.md).
 
 ## How the echo mechanic works
 
@@ -65,6 +83,8 @@ and how it stays free in multiplayer bandwidth:
   scoring/spawn systems are designed, with per-system testing steps
 - [`ECHO_SYSTEM.md`](ECHO_SYSTEM.md) — how recording/replay/multiple
   echoes/positional audio work, performance notes, and testing steps
+- [`MAP_SYSTEM.md`](MAP_SYSTEM.md) — the reusable map kit, how Echo
+  Chamber is built, map selection/sync, and how to add a new map
 - [`STABILIZATION_REPORT.md`](STABILIZATION_REPORT.md) — bugs found and
   fixed in the reliability pass, remaining known issues, and recommendations
 - [`NETWORKING_REPORT.md`](NETWORKING_REPORT.md) — architecture diagram,

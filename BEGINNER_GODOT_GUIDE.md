@@ -36,9 +36,10 @@ Hunt.
 
 A **Scene** in Godot is a reusable chunk of the game — a menu screen, a
 character, a level. Every `.tscn` file you see (`Player.tscn`,
-`Arena.tscn`, `MainMenu.tscn`, etc.) is one scene. Scenes are built as a
-**tree of Nodes**, and scenes can contain other scenes (e.g. `Main.tscn`
-contains an instance of `Arena.tscn`).
+`EchoChamber.tscn`, `MainMenu.tscn`, etc.) is one scene. Scenes are built
+as a **tree of Nodes**, and scenes can contain other scenes (e.g.
+`Main.tscn` loads the currently selected map scene into its
+`MapContainer` node at runtime — see `MAP_SYSTEM.md`).
 
 Double-click any `.tscn` file in the **FileSystem** panel (bottom-left)
 to open it in the **Scene** panel (top-left), where you'll see its node

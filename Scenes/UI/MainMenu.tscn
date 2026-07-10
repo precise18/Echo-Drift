@@ -46,6 +46,20 @@ theme_override_colors/font_color = Color(0.8, 0.85, 0.85, 1)
 text = "3D multiplayer hide and seek — MVP prototype"
 horizontal_alignment = 1
 
+[node name="MapRow" type="HBoxContainer" parent="CenterContainer/VBoxContainer"]
+layout_mode = 2
+alignment = 1
+theme_override_constants/separation = 8
+
+[node name="MapLabel" type="Label" parent="CenterContainer/VBoxContainer/MapRow"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.8, 0.85, 0.85, 1)
+text = "Map (host only):"
+
+[node name="MapOptionButton" type="OptionButton" parent="CenterContainer/VBoxContainer/MapRow"]
+custom_minimum_size = Vector2(160, 0)
+layout_mode = 2
+
 [node name="IPField" type="LineEdit" parent="CenterContainer/VBoxContainer"]
 custom_minimum_size = Vector2(260, 0)
 layout_mode = 2

@@ -5,11 +5,11 @@ class_name SpawnManager
 ## operation, since a captured Hider ends the round immediately rather
 ## than respawning mid-round (see GAMEPLAY_SYSTEMS.md for why).
 ##
-## Pure static utility: every map scene (Arena.tscn and any future map)
-## just needs a Marker3D in the "hider_spawn" group and one in the
-## "hunter_spawn" group; this class does the rest via the scene tree's
-## group lookup, so it works with whichever map is currently loaded
-## without knowing anything about that map in advance.
+## Pure static utility: every map (see MapKit.make_spawn_point, used by
+## every map script) just needs a Marker3D in the "hider_spawn" group and
+## one in the "hunter_spawn" group; this class does the rest via the
+## scene tree's group lookup, so it works with whichever map is
+## currently loaded without knowing anything about that map in advance.
 
 const HIDER_SPAWN_GROUP := "hider_spawn"
 const HUNTER_SPAWN_GROUP := "hunter_spawn"

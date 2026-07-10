@@ -87,6 +87,10 @@ func join_game(address: String) -> Error:
 func _on_peer_connected(id: int) -> void:
 	if not connected_peer_ids.has(id):
 		connected_peer_ids.append(id)
+	if multiplayer.is_server():
+		# Tell them which map is active *before* they load the game scene,
+		# so Main.gd never has to guess or race a late-arriving sync.
+		MapManager.sync_to_peer(id)
 	player_connected.emit(id)
 
 
@@ -100,6 +104,12 @@ func _on_peer_disconnected(id: int) -> void:
 func _on_connected_to_server() -> void:
 	connected_peer_ids = [1, multiplayer.get_unique_id()]
 	_register_session.rpc_id(1, local_session_id)
+	# Load immediately rather than waiting for MapManager's sync RPC —
+	# Godot's own MultiplayerSpawner replication for already-spawned
+	# nodes (e.g. the host's own player) can arrive as soon as the ENet
+	# connection completes, and needs Main.tscn's MultiplayerSpawner to
+	# already exist to receive it. Main.gd itself waits for the map sync
+	# before instantiating map *content*, which nothing else depends on.
 	get_tree().change_scene_to_file(GAME_SCENE)
 
 
