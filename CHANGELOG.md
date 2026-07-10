@@ -5,6 +5,28 @@ All notable changes to Echo Hunt. Versions follow
 sequential feature passes, each verified with headless two-peer
 regression tests before merging.
 
+## [1.0.1] — 2026-07-11
+
+First-playtest fixes — two bugs found the moment real humans entered
+the warm-up lobby together (both reproduced, fixed, and re-verified
+with a two-peer headless probe plus the full match-flow regression):
+
+- **Fixed: players launched skyward / unable to move in the lobby.**
+  Both bodies spawned coincident at the origin; each peer's physics
+  depenetrated its own body upward out of the other's replicated
+  collider, ratcheting the pair into the sky (observed at y≈56 within
+  seconds). Players now spawn at staggered lobby positions 4 m apart.
+- **Fixed: wrong camera current ("stuck in first person").**
+  `camera.current` and mouse-capture were decided once in `_ready`,
+  which runs before multiplayer authority is assigned on both the
+  server (for a late joiner's puppet — which stole the host's camera)
+  and clients (whose own camera never became current). Authority-
+  dependent state now lives in a re-runnable
+  `PlayerController.apply_authority_state()`, called again right after
+  authority is actually set on every spawn path.
+- Committed editor-generated `.gd.uid` script identifiers (Godot 4.4+
+  convention).
+
 ## [1.0.0] — 2026-07-11
 
 First release build — the game-jam-ready version.

@@ -15,8 +15,8 @@ compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 [application]
 
 config/name="Echo Hunt"
-config/version="1.0.0"
 config/description="3D multiplayer hide-and-seek built around an echo/reflection mechanic — your past movements become living echoes."
+config/version="1.0.1"
 run/main_scene="res://Scenes/UI/MainMenu.tscn"
 config/features=PackedStringArray("4.7", "Forward Plus")
 config/icon="res://icon.svg"

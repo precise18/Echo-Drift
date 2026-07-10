@@ -102,20 +102,41 @@ func _spawn_player(peer_id: int) -> void:
 		return
 	var player := PLAYER_SCENE.instantiate()
 	player.name = str(peer_id)
+	# Staggered lobby positions — never let two bodies spawn coincident.
+	# Overlapping capsules each depenetrate upward out of the *other
+	# peer's replicated* collider, which replicates the new height back,
+	# and the pair ratchet-climb into the sky (observed at y=56 within
+	# seconds). Fixed offsets rather than the map's spawn markers because
+	# a joining client's map content loads after its player body arrives;
+	# round-start placement still comes from SpawnManager as before.
+	player.position = Vector3(-2.0 + 4.0 * players_container.get_child_count(), 0.1, 4.0)
 	players_container.add_child(player)
-	# MultiplayerSpawner's "spawned" signal only fires on peers that
-	# *receive* the replicated node, not on the server that originates it
-	# via add_child() — so the server must set authority on itself here.
+	# Authority is set AFTER add_child on purpose: the server must still
+	# be the synchronizer's authority at the moment the spawner captures
+	# spawn state, or the placed position above never reaches the owning
+	# client (verified: reordering these sent the joiner a corrupt spawn
+	# position). MultiplayerSpawner's "spawned" signal only fires on
+	# *receiving* peers, so the server handles its own nodes here — and
+	# because _ready therefore ran with default authority, re-apply the
+	# controller's authority-dependent state (camera.current, mouse
+	# capture) now that the real owner is known, exactly as
+	# _on_node_spawned does on clients.
 	player.set_multiplayer_authority(peer_id)
+	player.apply_authority_state()
 
 
-## Runs on every peer whenever a player node appears under Players/,
-## whether spawned locally or replicated from the server. This is what
-## makes each *receiving* client agree on the same authority.
+## Runs on every receiving peer whenever a player node appears under
+## Players/ via replication. Replicated nodes necessarily run _ready
+## before this fires, with default authority — so after correcting the
+## authority, re-run the controller's authority-dependent setup (camera
+## current, mouse capture); without that, the local player's own camera
+## never becomes current on a client (the "stuck in first person" bug).
 func _on_node_spawned(node: Node) -> void:
 	var node_name := String(node.name)
 	if node_name.is_valid_int():
 		node.set_multiplayer_authority(node_name.to_int())
+		if node.has_method("apply_authority_state"):
+			node.apply_authority_state()
 
 
 func _on_role_assigned(peer_id: int, role: int) -> void:

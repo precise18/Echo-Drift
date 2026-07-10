@@ -37,22 +37,36 @@ func _ready() -> void:
 	footsteps.name = "Footsteps"
 	footsteps.stream = SoundFactory.footstep()
 	add_child(footsteps)
-	camera.current = is_multiplayer_authority()
-	if is_multiplayer_authority():
-		_capture_mouse()
-		# On X11/XWayland, grabbing the mouse before the window actually has
-		# OS focus silently fails (no error visible to the player, camera
-		# look just doesn't work). Re-capture whenever focus returns so a
-		# failed initial grab — or an alt-tab away and back — self-heals.
-		get_window().focus_entered.connect(_capture_mouse)
+	apply_authority_state()
 	_refresh_role_material()
 	RoundManager.role_assigned.connect(_on_role_assigned)
+
+
+## Everything about this body that depends on WHO owns it, in one
+## re-runnable place. Called from _ready, but _ready's answer can be
+## wrong: replicated nodes reach _ready before the receiving peer has
+## assigned their real authority (Main._on_node_spawned does that
+## afterward, then calls this again). Idempotent on purpose — the
+## is_connected guards make repeat calls safe.
+func apply_authority_state() -> void:
+	camera.current = is_multiplayer_authority()
+	if is_multiplayer_authority():
+		if not get_window().focus_entered.is_connected(_capture_mouse):
+			# On X11/XWayland, grabbing the mouse before the window actually
+			# has OS focus silently fails (no error visible to the player,
+			# camera look just doesn't work). Re-capture whenever focus
+			# returns so a failed initial grab — or an alt-tab away and back
+			# — self-heals.
+			get_window().focus_entered.connect(_capture_mouse)
+		_capture_mouse()
+	elif get_window().focus_entered.is_connected(_capture_mouse):
+		get_window().focus_entered.disconnect(_capture_mouse)
 
 
 func _exit_tree() -> void:
 	if RoundManager.role_assigned.is_connected(_on_role_assigned):
 		RoundManager.role_assigned.disconnect(_on_role_assigned)
-	if is_multiplayer_authority() and get_window().focus_entered.is_connected(_capture_mouse):
+	if get_window().focus_entered.is_connected(_capture_mouse):
 		get_window().focus_entered.disconnect(_capture_mouse)
 
 
