@@ -11,6 +11,8 @@ class_name EchoGhost
 ## `delay_seconds` values to show several simultaneous echoes of one
 ## recorded history — see EchoSystem.gd and ECHO_SYSTEM.md.
 
+const GHOST_CYAN := Color(0.55, 0.95, 1.0) # matches GlowLight / ghost_material.tres
+
 @export var delay_seconds := 10.0
 
 var recorder: EchoRecorder = null
@@ -19,6 +21,16 @@ var recorder: EchoRecorder = null
 @onready var _audio: EchoAudio = $EchoAudio
 
 var _current_anim := ""
+var _trail: GPUParticles3D
+
+
+func _ready() -> void:
+	# Feet-height so the trail reads as footsteps left behind, not a halo
+	# around the ghost's body. World-space (see MapKit.make_trail_particles)
+	# so it stays behind as the ghost moves along its recorded path.
+	_trail = MapKit.make_trail_particles(GHOST_CYAN, 10, "Trail")
+	_trail.position = Vector3(0, 0.1, 0)
+	add_child(_trail)
 
 
 func _process(_delta: float) -> void:
@@ -44,6 +56,7 @@ func _set_active(active: bool) -> void:
 	if visible == active:
 		return
 	visible = active
+	_trail.emitting = active
 	if active:
 		_audio.begin()
 	else:

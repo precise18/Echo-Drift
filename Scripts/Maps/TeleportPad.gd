@@ -60,6 +60,12 @@ func _build_visuals() -> void:
 	light.omni_range = 3.0
 	add_child(light)
 
+	# Constant, cheap (small amount, capped lifetime) idle shimmer so the
+	# pad reads as active/magical even before anyone steps on it.
+	var idle_sparkles := MapKit.make_sparkle_particles(pad_color, 6, RADIUS * 0.7, "IdleSparkles")
+	idle_sparkles.position = Vector3(0, 0.1, 0)
+	add_child(idle_sparkles)
+
 
 func _on_body_entered(body: Node3D) -> void:
 	if linked_pad == null or not (body is CharacterBody3D):
@@ -71,6 +77,19 @@ func _on_body_entered(body: Node3D) -> void:
 	if _cooldown_until.get(body, 0) > now:
 		return
 
+	_spawn_activation_burst(global_position)
 	body.global_position = linked_pad.global_position + Vector3(0, 0.1, 0)
 	body.velocity = Vector3.ZERO
 	linked_pad._cooldown_until[body] = now + COOLDOWN_MSEC
+	linked_pad._spawn_activation_burst(linked_pad.global_position)
+
+
+## A quick one-shot flourish at both ends of the jump — departure here,
+## arrival at the linked pad — so the teleport reads as a distinct event
+## rather than a silent teleport. Frees itself once finished (see
+## MapKit.make_burst_particles).
+func _spawn_activation_burst(at_position: Vector3) -> void:
+	var burst := MapKit.make_burst_particles(pad_color, 16, "TeleportBurst")
+	add_child(burst)
+	burst.global_position = at_position + Vector3(0, 0.5, 0)
+	burst.restart()

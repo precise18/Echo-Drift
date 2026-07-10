@@ -1,6 +1,22 @@
-[gd_resource type="StandardMaterial3D" format=3]
+[gd_resource type="StandardMaterial3D" load_steps=3 format=3]
+
+[sub_resource type="FastNoiseLite" id="FastNoiseLite_wall"]
+noise_type = 1
+frequency = 0.08
+
+[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_wall"]
+width = 128
+height = 128
+seamless = true
+as_normal_map = true
+bump_strength = 3.0
+noise = SubResource("FastNoiseLite_wall")
 
 [resource]
 albedo_color = Color(0.78, 0.76, 0.7, 1)
 roughness = 0.9
 metallic = 0.0
+normal_enabled = true
+normal_texture = SubResource("NoiseTexture2D_wall")
+normal_scale = 0.3
+uv1_scale = Vector3(8, 3, 8)

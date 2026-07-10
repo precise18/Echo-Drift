@@ -10,3 +10,6 @@ emission_energy_multiplier = 1.4
 metallic = 0.0
 roughness = 1.0
 cull_mode = 2
+rim_enabled = true
+rim = 0.6
+rim_tint = 0.8

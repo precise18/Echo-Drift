@@ -1,14 +1,21 @@
 # Assets
 
-The MVP uses **procedural placeholder geometry only** (Godot primitive
-meshes — capsules, cylinders, boxes, spheres — with flat `StandardMaterial3D`
-colors in `res://Materials/`). No external art files are required to run
-the project, which keeps the repository small and license-clean while the
-core loop is being validated. This also extends to audio (see
-`Scripts/Echo/EchoAudio.gd`, which synthesizes its tone at runtime rather
-than requiring a sound file) and maps (see `Scripts/Maps/MapKit.gd`,
-which builds every map from shared procedural pieces — see
-`MAP_SYSTEM.md`).
+Most of the game is still **procedural geometry** (Godot primitive meshes
+— capsules, cylinders, boxes, spheres — with `StandardMaterial3D`s in
+`res://Materials/`, several now with a procedural noise-based normal map
+rather than a flat color — see `ART_DIRECTION.md`). This also extends to
+audio (see `Scripts/Echo/EchoAudio.gd`, which synthesizes its tone at
+runtime rather than requiring a sound file) and maps (see
+`Scripts/Maps/MapKit.gd`, which builds every map from shared procedural
+pieces — see `MAP_SYSTEM.md`).
+
+`Assets/Environment/NatureKit/` is the one place real downloaded assets
+now live — 10 small CC0 low-poly props (rocks, flowers, a bush) used as
+environment dressing on the Echo Chamber map. See `ART_DIRECTION.md` for
+what was added, where it came from, and why. Everything else (characters,
+the mirror pool, teleport pads, walls, floor, pillars) is still
+procedural — that approach already matched the art direction target
+below, so it wasn't replaced.
 
 ## Art direction target
 
@@ -16,15 +23,15 @@ Stylized low-poly, high-readability, toy-like — closer to *Among Us* /
 *Human Fall Flat* / *Fall Guys* than anything realistic. Flat, saturated
 colors; simple silhouettes; no textures needed to read the scene.
 
-## Where post-MVP art should go
+## Where more post-MVP art should go
 
-When the project moves from MVP into full jam production, replace the
-placeholders with free/openly-licensed packs and drop them here:
+Further replacing placeholders with free/openly-licensed packs:
 
 | Folder | Contents |
 |---|---|
-| `Assets/Characters/` | Kenney "Toon Characters" / Quaternius character packs (replaces `Scenes/Player/Player.tscn`'s capsule mesh + adds a real skeleton/animations for `AnimPlayer`) |
-| `Assets/Environment/` | Kenney "Nature Kit" / "Prototype Kit" / "Dungeon Kit", Quaternius "Low Poly Nature" / "Dungeon" / "Castle" (replaces `MapKit`'s procedural meshes/materials theme-by-theme) |
+| `Assets/Characters/` | Kenney "Toon Characters" / Quaternius character packs (replaces `Scenes/Player/Player.tscn`'s capsule mesh + adds a real skeleton/animations for `AnimPlayer` — not done yet; the capsule's animations were improved procedurally instead, see `ART_DIRECTION.md`) |
+| `Assets/Environment/NatureKit/` | Kenney "Nature Kit" (done — see `ART_DIRECTION.md`) |
+| `Assets/Environment/` (other) | Kenney "Prototype Kit" / "Dungeon Kit", Quaternius "Dungeon" / "Castle" if more maps are added |
 
 Preferred sources, in priority order: **Kenney.nl**, **Quaternius**,
 **Poly Pizza**, **OpenGameArt** (audio/SFX). Only use assets with licenses

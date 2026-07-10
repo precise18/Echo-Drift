@@ -6,6 +6,7 @@ extends Node3D
 ## systems.
 
 const PLAYER_SCENE := preload("res://Scenes/Player/Player.tscn")
+const CAPTURE_COLOR := Color(1.0, 0.75, 0.3) # warm gold — distinct from the echo system's cyan
 
 @onready var map_container: Node3D = $MapContainer
 @onready var players_container: Node3D = $Players
@@ -138,9 +139,26 @@ func _on_round_started() -> void:
 
 
 ## Stops the echo(es) the instant the round ends, rather than letting a
-## ghost keep trailing (and humming) over the round-end screen.
-func _on_round_ended(_winner_role: int) -> void:
+## ghost keep trailing (and humming) over the round-end screen. Also marks
+## an actual capture (winner_role == HUNTER; a timeout has no such moment)
+## with a one-shot burst at the hider's position — every peer runs this
+## independently off the same replicated round_ended RPC, so the flourish
+## appears in the same place for both players without needing its own
+## network message.
+func _on_round_ended(winner_role: int) -> void:
 	echo_system.clear()
+	if winner_role == Role.HUNTER:
+		_spawn_capture_burst()
+
+
+func _spawn_capture_burst() -> void:
+	var hider_node := players_container.get_node_or_null(str(RoundManager.hider_id))
+	if hider_node == null:
+		return
+	var burst := MapKit.make_burst_particles(CAPTURE_COLOR, 28, "CaptureBurst")
+	map_container.add_child(burst)
+	burst.global_position = hider_node.global_position + Vector3(0, 1.0, 0)
+	burst.restart()
 
 
 ## Each peer only moves the body it has authority over; the synchronizer

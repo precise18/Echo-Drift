@@ -122,6 +122,123 @@ static func make_spawn_point(position: Vector3, group: String, node_name := "Spa
 	return marker
 
 
+## Places a decorative prop scene (e.g. a downloaded low-poly model —
+## see Assets/Environment/NatureKit/ and ART_DIRECTION.md) at a given
+## position, with optional Y-rotation and uniform scale. Deliberately
+## adds no collision and isn't tagged into NAV_SOURCE_GROUP — props
+## placed with this are visual dressing only, never gameplay-relevant
+## obstacles (use make_box_obstacle/make_pillar for those).
+static func place_prop(scene: PackedScene, position: Vector3, y_rotation_deg: float = 0.0, uniform_scale: float = 1.0) -> Node3D:
+	var instance: Node3D = scene.instantiate()
+	instance.position = position
+	instance.rotation.y = deg_to_rad(y_rotation_deg)
+	instance.scale = Vector3.ONE * uniform_scale
+	return instance
+
+
+## A small looping ambient sparkle effect — deliberately cheap (a capped
+## particle count, one tiny unshaded emissive sphere as the draw mesh, no
+## collision or physics processing) so it's safe to use in more than one
+## place per map without meaningfully changing performance. Used for the
+## mirror pool's surface glimmer and each teleport pad's idle shimmer.
+static func make_sparkle_particles(color: Color, amount: int, spawn_radius: float, node_name := "Sparkles") -> GPUParticles3D:
+	var particles := GPUParticles3D.new()
+	particles.name = node_name
+	particles.amount = amount
+	particles.lifetime = 2.5
+	particles.emitting = true
+
+	var process_material := ParticleProcessMaterial.new()
+	process_material.direction = Vector3(0, 1, 0)
+	process_material.spread = 20.0
+	process_material.gravity = Vector3(0, 0.15, 0) # gentle upward drift, not a fall
+	process_material.initial_velocity_min = 0.1
+	process_material.initial_velocity_max = 0.3
+	process_material.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_SPHERE
+	process_material.emission_sphere_radius = spawn_radius
+	process_material.scale_min = 0.5
+	process_material.scale_max = 1.0
+	particles.process_material = process_material
+
+	var mesh := SphereMesh.new()
+	mesh.radius = 0.05
+	mesh.height = 0.1
+	mesh.radial_segments = 6
+	mesh.rings = 3
+	var material := StandardMaterial3D.new()
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.emission_enabled = true
+	material.emission = color
+	material.emission_energy_multiplier = 2.0
+	material.albedo_color = Color(color.r, color.g, color.b, 0.7)
+	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mesh.material = material
+	particles.draw_pass_1 = mesh
+
+	return particles
+
+
+## A one-shot particle burst — teleport activation, capture, anything
+## that needs a quick "something just happened here" flourish rather than
+## a continuous effect. Frees itself once the burst finishes so it never
+## lingers as dead weight in the scene tree.
+static func make_burst_particles(color: Color, amount: int, node_name := "Burst") -> GPUParticles3D:
+	var particles := make_sparkle_particles(color, amount, 0.3, node_name)
+	particles.lifetime = 0.6
+	particles.one_shot = true
+	particles.explosiveness = 0.9
+	var process_material: ParticleProcessMaterial = particles.process_material
+	process_material.initial_velocity_min = 1.0
+	process_material.initial_velocity_max = 2.5
+	process_material.gravity = Vector3(0, -1.0, 0)
+	particles.finished.connect(particles.queue_free)
+	return particles
+
+
+## A short-lived, world-space particle drip meant to be parented to a
+## moving node (e.g. EchoGhost) so it leaves a fading trail behind rather
+## than a cloud that follows the emitter — `local_coords = false` is what
+## makes already-emitted particles stay put in world space while the
+## parent keeps moving. Caller controls `.emitting` to turn the trail on
+## and off (see EchoGhost._set_active); deliberately tiny (short lifetime,
+## capped amount) so a trail running continuously for the whole time a
+## ghost is visible stays cheap.
+static func make_trail_particles(color: Color, amount: int, node_name := "Trail") -> GPUParticles3D:
+	var particles := GPUParticles3D.new()
+	particles.name = node_name
+	particles.amount = amount
+	particles.lifetime = 0.5
+	particles.emitting = false
+	particles.local_coords = false
+
+	var process_material := ParticleProcessMaterial.new()
+	process_material.direction = Vector3(0, 1, 0)
+	process_material.spread = 15.0
+	process_material.gravity = Vector3(0, -0.3, 0)
+	process_material.initial_velocity_min = 0.05
+	process_material.initial_velocity_max = 0.2
+	process_material.scale_min = 0.4
+	process_material.scale_max = 0.8
+	particles.process_material = process_material
+
+	var mesh := SphereMesh.new()
+	mesh.radius = 0.04
+	mesh.height = 0.08
+	mesh.radial_segments = 6
+	mesh.rings = 3
+	var material := StandardMaterial3D.new()
+	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.emission_enabled = true
+	material.emission = color
+	material.emission_energy_multiplier = 2.0
+	material.albedo_color = Color(color.r, color.g, color.b, 0.6)
+	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mesh.material = material
+	particles.draw_pass_1 = mesh
+
+	return particles
+
+
 ## Bakes a walkable NavigationMesh from every MapKit-built piece in the
 ## map, wherever it sits in the tree — every StaticBody3D this file
 ## creates is auto-tagged into NAV_SOURCE_GROUP, and baking parses by
