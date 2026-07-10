@@ -1,10 +1,9 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://Scripts/World/Main.gd" id="1_main"]
 [ext_resource type="PackedScene" path="res://Scenes/Maps/Arena.tscn" id="2_arena"]
-[ext_resource type="Script" path="res://Scripts/Echo/EchoRecorder.gd" id="3_recorder"]
-[ext_resource type="PackedScene" path="res://Scenes/Player/EchoGhost.tscn" id="4_ghost"]
-[ext_resource type="PackedScene" path="res://Scenes/UI/HUD.tscn" id="5_hud"]
+[ext_resource type="Script" path="res://Scripts/Echo/EchoSystem.gd" id="3_echosystem"]
+[ext_resource type="PackedScene" path="res://Scenes/UI/HUD.tscn" id="4_hud"]
 
 [node name="Main" type="Node3D"]
 script = ExtResource("1_main")
@@ -18,10 +17,6 @@ spawn_path = NodePath("../Players")
 _spawnable_scenes = PackedStringArray("res://Scenes/Player/Player.tscn")
 
 [node name="EchoSystem" type="Node" parent="."]
+script = ExtResource("3_echosystem")
 
-[node name="EchoRecorder" type="Node" parent="EchoSystem"]
-script = ExtResource("3_recorder")
-
-[node name="EchoGhost" parent="EchoSystem" instance=ExtResource("4_ghost")]
-
-[node name="HUD" parent="." instance=ExtResource("5_hud")]
+[node name="HUD" parent="." instance=ExtResource("4_hud")]

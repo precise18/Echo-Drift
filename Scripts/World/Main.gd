@@ -8,17 +8,16 @@ const PLAYER_SCENE := preload("res://Scenes/Player/Player.tscn")
 
 @onready var players_container: Node3D = $Players
 @onready var spawner: MultiplayerSpawner = $MultiplayerSpawner
-@onready var echo_recorder: EchoRecorder = $EchoSystem/EchoRecorder
-@onready var echo_ghost: EchoGhost = $EchoSystem/EchoGhost
+@onready var echo_system: EchoSystem = $EchoSystem
 
 
 func _ready() -> void:
 	RoundManager.register_players_container(players_container)
-	echo_ghost.recorder = echo_recorder
 
 	spawner.spawned.connect(_on_node_spawned)
 	RoundManager.role_assigned.connect(_on_role_assigned)
 	RoundManager.round_started.connect(_on_round_started)
+	RoundManager.round_ended.connect(_on_round_ended)
 
 	if multiplayer.is_server():
 		NetworkManager.player_connected.connect(_on_peer_connected_server)
@@ -75,11 +74,17 @@ func _on_role_assigned(peer_id: int, role: int) -> void:
 		return
 	var hider_node := players_container.get_node_or_null(str(peer_id))
 	if hider_node != null:
-		echo_recorder.set_target(hider_node)
+		echo_system.set_target(hider_node)
 
 
 func _on_round_started() -> void:
 	_respawn_local_player()
+
+
+## Stops the echo(es) the instant the round ends, rather than letting a
+## ghost keep trailing (and humming) over the round-end screen.
+func _on_round_ended(_winner_role: int) -> void:
+	echo_system.clear()
 
 
 ## Each peer only moves the body it has authority over; the synchronizer

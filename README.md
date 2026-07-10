@@ -41,13 +41,17 @@ Main Menu → Host or Join → Players Spawn → Hider Hides
 
 ## How the echo mechanic works
 
-Every peer keeps a 10-second rolling buffer of the Hider's transform
-(`Scripts/Echo/EchoRecorder.gd`). The echo ghost
+Every peer keeps a rolling buffer of the Hider's transform and animation
+state (`Scripts/Echo/EchoRecorder.gd`). The echo ghost
 (`Scripts/Echo/EchoGhost.gd`) continuously renders the Hider's position
-from exactly `now - 10s`, interpolated between recorded samples. It has no
-collision and uses a transparent, unshaded, emissive material so it always
-reads as "not real." It only appears once the buffer holds a full 10
-seconds of data, so it never flickers into existence from nothing.
+and animation from `now - 10s`, interpolated between recorded samples,
+plus a soft positional audio cue. It has no collision and uses a
+transparent, unshaded, emissive material so it always reads as "not
+real." It only appears (and only makes sound) once the buffer holds a
+full 10 seconds of data, so it never flickers into existence from
+nothing. Full writeup, including how multiple simultaneous echoes work
+and how it stays free in multiplayer bandwidth:
+[`ECHO_SYSTEM.md`](ECHO_SYSTEM.md).
 
 ## Documentation index
 
@@ -59,6 +63,8 @@ seconds of data, so it never flickers into existence from nothing.
   for every MVP feature
 - [`GAMEPLAY_SYSTEMS.md`](GAMEPLAY_SYSTEMS.md) — how the round/match/
   scoring/spawn systems are designed, with per-system testing steps
+- [`ECHO_SYSTEM.md`](ECHO_SYSTEM.md) — how recording/replay/multiple
+  echoes/positional audio work, performance notes, and testing steps
 - [`STABILIZATION_REPORT.md`](STABILIZATION_REPORT.md) — bugs found and
   fixed in the reliability pass, remaining known issues, and recommendations
 - [`BEGINNER_GODOT_GUIDE.md`](BEGINNER_GODOT_GUIDE.md) — a from-zero

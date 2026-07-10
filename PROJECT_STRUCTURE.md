@@ -11,6 +11,7 @@ Echo Hunt/
 ├── BEGINNER_GODOT_GUIDE.md
 ├── STABILIZATION_REPORT.md
 ├── GAMEPLAY_SYSTEMS.md
+├── ECHO_SYSTEM.md
 │
 ├── Scenes/
 │   ├── Main.tscn               Game root: arena + players + echo system + HUD
@@ -19,7 +20,7 @@ Echo Hunt/
 │   │   └── HUD.tscn             In-round timer / role / round-end panel (Scoreboard lives here too)
 │   ├── Player/
 │   │   ├── Player.tscn          Third-person character (CharacterBody3D)
-│   │   └── EchoGhost.tscn       Transparent, collision-less echo replay
+│   │   └── EchoGhost.tscn       Transparent, collision-less echo replay (animation + positional audio)
 │   └── Maps/
 │       └── Arena.tscn           MVP's single map (forest-styled arena)
 │
@@ -36,8 +37,10 @@ Echo Hunt/
 │   ├── Player/
 │   │   └── PlayerController.gd  Input, movement, camera, placeholder animation
 │   ├── Echo/
-│   │   ├── EchoRecorder.gd      Rolling 10s transform buffer for one target
-│   │   └── EchoGhost.gd         Renders the buffer at a 10s delay
+│   │   ├── EchoSystem.gd         Owns one recorder + N ghosts for one tracked target (public API)
+│   │   ├── EchoRecorder.gd       Configurable rolling transform+animation buffer for one target
+│   │   ├── EchoGhost.gd          Renders the buffer at a configurable delay, replays animation
+│   │   └── EchoAudio.gd          Procedural positional audio cue for one ghost
 │   ├── UI/
 │   │   ├── MainMenu.gd          Wires menu buttons to NetworkManager
 │   │   ├── HUD.gd                Reflects RoundManager state on screen (timer/role/round-end)
@@ -47,15 +50,18 @@ Echo Hunt/
 │       └── SpawnManager.gd       Pure logic: spawn-point lookup + player (re)placement
 │
 ├── Materials/                   StandardMaterial3D placeholders (flat colors)
-├── Assets/                      Empty placeholder folders + README for future art
+├── Assets/
+│   ├── Characters/MovementAnimations.tres  Shared Idle/Walk/Run library (Player + EchoGhost)
+│   └── Environment/              Empty placeholder folder for future art
 ├── UI/Theme/                    Reserved for a shared Theme resource (post-MVP)
 └── Audio/                       Reserved for SFX/music (post-MVP)
 ```
 
 See [`GAMEPLAY_SYSTEMS.md`](GAMEPLAY_SYSTEMS.md) for a full writeup of every
-gameplay system listed above — responsibilities, APIs, signals, and
-per-system testing steps. This file stays focused on overall project
-layout; that one covers gameplay design in depth.
+round/match system — responsibilities, APIs, signals, and per-system
+testing steps — and [`ECHO_SYSTEM.md`](ECHO_SYSTEM.md) for the same
+treatment of the echo/ghost mechanic specifically. This file stays
+focused on overall project layout.
 
 ## Script responsibilities (one job each)
 
@@ -69,8 +75,10 @@ layout; that one covers gameplay design in depth.
 | `WinConditions.gd` | Pure functions: is this a capture? is this a timeout? | Acting on the answer |
 | `SpawnManager.gd` | Pure functions: where is this role's spawn point; move a body there | Deciding *when* to respawn |
 | `PlayerController.gd` | Reading input and moving *its own* body; ignores input for bodies it doesn't own | Networking, round rules |
-| `EchoRecorder.gd` | Buffering one target's transform history | Deciding *who* the target is |
-| `EchoGhost.gd` | Rendering a delayed transform | Recording history |
+| `EchoSystem.gd` | Owning one recorder + N ghosts for one target; the only echo API `Main.gd` talks to | Recording/rendering details |
+| `EchoRecorder.gd` | Buffering one target's transform + animation history | Deciding *who* the target is, rendering |
+| `EchoGhost.gd` | Rendering a delayed transform + animation, driving its audio's on/off | Recording history |
+| `EchoAudio.gd` | Synthesizing/playing one ghost's positional tone | Deciding *when* it should play |
 | `Main.gd` | Gluing the above together (spawning, wiring the echo target, triggering respawns) | Any gameplay rule itself |
 | `MainMenu.gd` / `HUD.gd` | Translating UI events ↔ autoload calls, displaying round state | Score display (that's Scoreboard.gd), any gameplay logic |
 | `Scoreboard.gd` | Displaying cumulative score from MatchStateManager | Round state, timer, roles |
