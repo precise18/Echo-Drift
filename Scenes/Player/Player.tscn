@@ -1,6 +1,10 @@
+<<<<<<< HEAD
 [gd_scene load_steps=8 format=3]
+=======
+[gd_scene format=3 uid="uid://gypdc1cs7cf6"]
+>>>>>>> 1642334 (b4)
 
-[ext_resource type="Script" path="res://Scripts/Player/PlayerController.gd" id="1_ctrl"]
+[ext_resource type="Script" uid="uid://xx0b1ianrjgk" path="res://Scripts/Player/PlayerController.gd" id="1_ctrl"]
 [ext_resource type="Material" path="res://Materials/player_hider_material.tres" id="2_mat"]
 [ext_resource type="AnimationLibrary" path="res://Assets/Characters/MovementAnimations.tres" id="3_anims"]
 
@@ -15,6 +19,67 @@ height = 1.6
 [sub_resource type="BoxMesh" id="BoxMesh_face"]
 size = Vector3(0.16, 0.16, 0.06)
 
+<<<<<<< HEAD
+=======
+[sub_resource type="Animation" id="Animation_idle"]
+resource_name = "Idle"
+length = 1.4
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("BodyMesh:position:y")
+tracks/0/interp = 2
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.7, 1.4),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 0,
+"values": [0.9, 0.93, 0.9]
+}
+
+[sub_resource type="Animation" id="Animation_run"]
+resource_name = "Run"
+length = 0.3
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("BodyMesh:position:y")
+tracks/0/interp = 2
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.15, 0.3),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 0,
+"values": [0.88, 1.02, 0.88]
+}
+
+[sub_resource type="Animation" id="Animation_walk"]
+resource_name = "Walk"
+length = 0.5
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("BodyMesh:position:y")
+tracks/0/interp = 2
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.25, 0.5),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 0,
+"values": [0.9, 0.98, 0.9]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_anims"]
+_data = {
+&"Idle": SubResource("Animation_idle"),
+&"Run": SubResource("Animation_run"),
+&"Walk": SubResource("Animation_walk")
+}
+
+>>>>>>> 1642334 (b4)
 [sub_resource type="SceneReplicationConfig" id="SceneReplicationConfig_player"]
 properties/0/path = NodePath(".:position")
 properties/0/spawn = true
@@ -23,42 +88,45 @@ properties/1/path = NodePath("BodyMesh:rotation:y")
 properties/1/spawn = true
 properties/1/replication_mode = 2
 
-[node name="Player" type="CharacterBody3D"]
+[node name="Player" type="CharacterBody3D" unique_id=1594052293]
 collision_layer = 2
 collision_mask = 3
 physics_interpolation_mode = 1
 script = ExtResource("1_ctrl")
 
-[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=1592851796]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
 shape = SubResource("CapsuleShape3D_body")
 
-[node name="BodyMesh" type="MeshInstance3D" parent="."]
+[node name="BodyMesh" type="MeshInstance3D" parent="." unique_id=629565482]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
 mesh = SubResource("CapsuleMesh_body")
 surface_material_override/0 = ExtResource("2_mat")
 
-[node name="FaceIndicator" type="MeshInstance3D" parent="BodyMesh"]
+[node name="FaceIndicator" type="MeshInstance3D" parent="BodyMesh" unique_id=1864423651]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.55, -0.36)
 mesh = SubResource("BoxMesh_face")
 
-[node name="CameraPivot" type="Node3D" parent="."]
+[node name="CameraPivot" type="Node3D" parent="." unique_id=1878650270]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.55, 0)
 
-[node name="SpringArm3D" type="SpringArm3D" parent="CameraPivot"]
+[node name="SpringArm3D" type="SpringArm3D" parent="CameraPivot" unique_id=1593798398]
 transform = Transform3D(-1, 0, 8.74228e-08, 0, 1, 0, -8.74228e-08, 0, -1, 0, 0, 0)
-collision_mask = 1
 spring_length = 4.0
 margin = 0.3
 
-[node name="Camera3D" type="Camera3D" parent="CameraPivot/SpringArm3D"]
-transform = Transform3D(-1, 0, 8.74228e-08, 0, 1, 0, -8.74228e-08, 0, -1, 0, 0, 0)
-fov = 75.0
+[node name="Camera3D" type="Camera3D" parent="CameraPivot/SpringArm3D" unique_id=630586741]
+transform = Transform3D(-1, 0, 8.74228e-08, 0, 1, 0, -8.74228e-08, 0, -1, -2.0922471e-07, 0, -2.3932512)
 
+<<<<<<< HEAD
 [node name="AnimPlayer" type="AnimationPlayer" parent="."]
 libraries = {
 "": ExtResource("3_anims")
 }
+=======
+[node name="AnimPlayer" type="AnimationPlayer" parent="." unique_id=382963793]
+libraries/ = SubResource("AnimationLibrary_anims")
+>>>>>>> 1642334 (b4)
 
-[node name="MultiplayerSynchronizer" type="MultiplayerSynchronizer" parent="."]
+[node name="MultiplayerSynchronizer" type="MultiplayerSynchronizer" parent="." unique_id=1390173532]
 replication_config = SubResource("SceneReplicationConfig_player")

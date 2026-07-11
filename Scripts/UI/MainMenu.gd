@@ -19,6 +19,7 @@ var _map_description: Label
 var _ip_field: LineEdit
 var _join_button: Button
 var _join_status: Label
+var _room_code_label: Label
 
 
 func _ready() -> void:
@@ -43,6 +44,7 @@ func _ready() -> void:
 	_show_screen("title")
 
 	NetworkManager.connection_failed.connect(_on_connection_failed)
+	WebRTCSignaler.room_created.connect(_on_room_created)
 
 	# Explains why the player landed back here instead of silently
 	# dumping them at the menu — e.g. after the host disconnected. This
@@ -126,7 +128,10 @@ func _build_host_screen() -> Control:
 	_map_description = UIKit.make_paragraph(MapManager.get_map_description(_selected_map_id), 14)
 	content.add_child(_map_description)
 	content.add_child(_spacer(6))
-	content.add_child(UIKit.make_title("Your opponent joins with your LAN IP, port %d" % NetworkManager.PORT, 13, UIKit.COLOR_MUTED))
+	content.add_child(UIKit.make_title("Your opponent joins with the Room Code", 13, UIKit.COLOR_MUTED))
+	
+	_room_code_label = UIKit.make_title("", 24, UIKit.COLOR_GOLD)
+	content.add_child(_room_code_label)
 
 	var start := UIKit.make_button("Start Hosting")
 	start.pressed.connect(_on_start_hosting_pressed)
@@ -139,11 +144,11 @@ func _build_join_screen() -> Control:
 	var screen := _build_dialog_screen("JOIN A MATCH")
 	var content: VBoxContainer = screen["content"]
 
-	content.add_child(UIKit.make_title("Enter the host's LAN IP address", 15, UIKit.COLOR_MUTED))
+	content.add_child(UIKit.make_title("Enter the Room Code", 15, UIKit.COLOR_MUTED))
 
 	_ip_field = LineEdit.new()
 	_ip_field.text = GameSettings.last_join_ip
-	_ip_field.placeholder_text = "e.g. 192.168.1.20"
+	_ip_field.placeholder_text = "e.g. ABCD"
 	_ip_field.alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_ip_field.custom_minimum_size = Vector2(280, 44)
 	_ip_field.text_submitted.connect(func(_text: String) -> void: _on_join_pressed())
@@ -190,16 +195,20 @@ func _build_credits_screen() -> Control:
 
 func _on_start_hosting_pressed() -> void:
 	MapManager.set_selected_map(_selected_map_id)
+	_room_code_label.text = "Generating code..."
 	var err := NetworkManager.host_game()
 	if err != OK:
-		_notice_label.text = "Could not host (error %d). Is the port already in use?" % err
+		_notice_label.text = "Could not host (error %d)." % err
 		_show_screen("title")
+
+func _on_room_created(code: String) -> void:
+	_room_code_label.text = "Room Code: " + code + "\nWaiting for opponent..."
 
 
 func _on_join_pressed() -> void:
-	var address := _ip_field.text.strip_edges()
+	var address := _ip_field.text.strip_edges().to_upper()
 	GameSettings.set_last_join_ip(address)
-	_join_status.text = "Connecting to %s..." % (address if address != "" else "127.0.0.1")
+	_join_status.text = "Connecting to room %s..." % address
 	_join_button.disabled = true
 	var err := NetworkManager.join_game(address)
 	if err != OK:

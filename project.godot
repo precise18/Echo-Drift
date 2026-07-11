@@ -30,6 +30,7 @@ MapManager="*res://Scripts/Autoload/MapManager.gd"
 AudioManager="*res://Scripts/Autoload/AudioManager.gd"
 GameSettings="*res://Scripts/Autoload/GameSettings.gd"
 TransitionScreen="*res://Scripts/Autoload/TransitionScreen.gd"
+WebRTCSignaler="*res://Scripts/Autoload/WebRTCSignaler.gd"
 
 [display]
 

@@ -54,16 +54,17 @@ func _ready() -> void:
 	multiplayer.connected_to_server.connect(_on_connected_to_server)
 	multiplayer.connection_failed.connect(_on_connection_failed)
 	multiplayer.server_disconnected.connect(_on_server_disconnected)
+	WebRTCSignaler.match_ready.connect(_on_webrtc_match_ready)
 	randomize()
 	local_session_id = "%d-%d" % [Time.get_ticks_usec(), randi()]
 
+func _on_webrtc_match_ready() -> void:
+	if not WebRTCSignaler.is_host:
+		pass # We wait for connected_to_server instead for clients
+
 
 func host_game() -> Error:
-	var peer := ENetMultiplayerPeer.new()
-	var err := peer.create_server(PORT, MAX_PLAYERS)
-	if err != OK:
-		return err
-	multiplayer.multiplayer_peer = peer
+	WebRTCSignaler.start_host()
 	connected_peer_ids = [1] # the host is always peer id 1
 	TransitionScreen.cover("Entering %s..." % MapManager.get_map_name(MapManager.selected_map_id))
 	get_tree().change_scene_to_file(GAME_SCENE)
@@ -74,14 +75,10 @@ func host_game() -> Error:
 ## local_session_id is unchanged) after a dropped connection and the
 ## server will recognize the session if called within
 ## RECONNECT_GRACE_PERIOD of the original disconnect.
-func join_game(address: String) -> Error:
-	if address.is_empty():
-		address = "127.0.0.1"
-	var peer := ENetMultiplayerPeer.new()
-	var err := peer.create_client(address, PORT)
-	if err != OK:
-		return err
-	multiplayer.multiplayer_peer = peer
+func join_game(room_code: String) -> Error:
+	if room_code.is_empty():
+		return ERR_INVALID_PARAMETER
+	WebRTCSignaler.start_client(room_code)
 	return OK
 
 
