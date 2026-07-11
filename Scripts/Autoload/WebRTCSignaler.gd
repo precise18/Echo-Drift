@@ -23,6 +23,15 @@ func _ready():
 	add_child(http)
 	var http_url = server_url.replace("wss://", "https://").replace("ws://", "http://")
 	http.request(http_url)
+	
+	var timer = Timer.new()
+	timer.wait_time = 30.0
+	timer.autostart = true
+	timer.timeout.connect(func():
+		if ws != null and ws.get_ready_state() == WebSocketPeer.STATE_OPEN:
+			ws.put_packet(JSON.stringify({"type": "ping"}).to_utf8_buffer())
+	)
+	add_child(timer)
 
 func _process(_delta):
 	if ws != null:
@@ -84,6 +93,8 @@ func start_quick_play():
 func stop():
 	set_process(false)
 	if ws != null:
+		if ws.get_ready_state() == WebSocketPeer.STATE_OPEN:
+			ws.put_packet(JSON.stringify({"type": "leave_room"}).to_utf8_buffer())
 		ws.close()
 		ws = null
 	if webrtc_mp != null:
