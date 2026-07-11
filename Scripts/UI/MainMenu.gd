@@ -153,6 +153,14 @@ func _build_join_screen() -> Control:
 	_ip_field.alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_ip_field.custom_minimum_size = Vector2(280, 44)
 	_ip_field.text_submitted.connect(func(_text: String) -> void: _on_join_pressed())
+	_ip_field.text_changed.connect(func(new_text: String) -> void:
+		_ip_field.text = new_text.to_upper()
+		_ip_field.caret_column = _ip_field.text.length()
+	)
+	_ip_field.visibility_changed.connect(func() -> void:
+		if _ip_field.is_visible_in_tree():
+			_ip_field.grab_focus()
+	)
 	content.add_child(_ip_field)
 
 	_join_button = UIKit.make_button("Join")
@@ -209,7 +217,8 @@ func _on_quick_play_pressed() -> void:
 		_notice_label.text = "Quick Play failed (error %d)." % err
 
 func _on_room_created(code: String) -> void:
-	_room_code_label.text = "Room Code: " + code + "\nWaiting for opponent..."
+	DisplayServer.clipboard_set(code)
+	_room_code_label.text = "Room Code: " + code + "\n(Copied to clipboard!)\nWaiting for opponent..."
 
 
 func _on_join_pressed() -> void:
