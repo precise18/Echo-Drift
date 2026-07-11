@@ -50,6 +50,12 @@ var _paused := false
 # directly as hud.minimap to wire up the map, echo ghost, and local player.
 var minimap: Minimap
 
+# Echo buffer indicator (Hider only): shows progress until the echo goes live.
+var _echo_indicator: VBoxContainer
+var _echo_bar: ProgressBar
+var _echo_label: Label
+var _echo_recorder: EchoRecorder = null
+
 var _connection_status_label: Label
 var _grace_deadline := -1.0
 
@@ -77,6 +83,7 @@ func _ready() -> void:
 	_build_pause_panel()
 	_build_connection_status()
 	_build_minimap()
+	_build_echo_indicator()
 
 	RoundManager.round_started.connect(_on_round_started)
 	RoundManager.round_ended.connect(_on_round_ended)
@@ -127,6 +134,8 @@ func _process(_delta: float) -> void:
 		if remaining != _last_grace_second:
 			_last_grace_second = remaining
 			_connection_status_label.text = "Opponent disconnected — waiting %ds to reconnect..." % remaining
+
+	_update_echo_indicator()
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -338,6 +347,64 @@ func _build_minimap() -> void:
 	minimap.offset_bottom = -20
 	minimap.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_root.add_child(minimap)
+
+
+func _build_echo_indicator() -> void:
+	_echo_indicator = VBoxContainer.new()
+	_echo_indicator.set_anchors_preset(Control.PRESET_BOTTOM_CENTER)
+	_echo_indicator.offset_left  = -110
+	_echo_indicator.offset_right =  110
+	_echo_indicator.offset_top   = -72
+	_echo_indicator.offset_bottom = -20
+	_echo_indicator.add_theme_constant_override("separation", 4)
+	_echo_indicator.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_echo_indicator.visible = false
+
+	_echo_label = UIKit.make_label("Echo in 10s", 13, UIKit.COLOR_MUTED)
+	_echo_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_echo_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_echo_indicator.add_child(_echo_label)
+
+	_echo_bar = ProgressBar.new()
+	_echo_bar.custom_minimum_size = Vector2(220, 6)
+	_echo_bar.min_value = 0.0
+	_echo_bar.max_value = 100.0
+	_echo_bar.value = 0.0
+	_echo_bar.show_percentage = false
+	_echo_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var bar_style := StyleBoxFlat.new()
+	bar_style.bg_color = UIKit.COLOR_ACCENT
+	bar_style.set_corner_radius_all(3)
+	_echo_bar.add_theme_stylebox_override("fill", bar_style)
+	var bg_style := StyleBoxFlat.new()
+	bg_style.bg_color = Color(UIKit.COLOR_PANEL.r, UIKit.COLOR_PANEL.g, UIKit.COLOR_PANEL.b, 0.8)
+	bg_style.set_corner_radius_all(3)
+	_echo_bar.add_theme_stylebox_override("background", bg_style)
+	_echo_indicator.add_child(_echo_bar)
+
+	_root.add_child(_echo_indicator)
+
+
+func set_echo_recorder(recorder: EchoRecorder) -> void:
+	_echo_recorder = recorder
+
+
+func _update_echo_indicator() -> void:
+	if not RoundManager.round_active or _local_role() != Role.HIDER or _echo_recorder == null:
+		_echo_indicator.visible = false
+		return
+
+	_echo_indicator.visible = true
+	var fill := _echo_recorder.buffer_fill_ratio()
+	_echo_bar.value = fill * 100.0
+
+	if fill >= 1.0:
+		_echo_label.text = "Echo is live"
+		_echo_label.add_theme_color_override("font_color", UIKit.COLOR_ACCENT)
+	else:
+		var secs_left := ceili(_echo_recorder.buffer_seconds * (1.0 - fill))
+		_echo_label.text = "Echo in %ds" % secs_left
+		_echo_label.add_theme_color_override("font_color", UIKit.COLOR_MUTED)
 
 
 # ---------------------------------------------------------------------------

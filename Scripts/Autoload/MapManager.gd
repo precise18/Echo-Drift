@@ -18,6 +18,16 @@ const MAPS := {
 		"scene": "res://Scenes/Maps/EchoChamber.tscn",
 		"description": "A perfectly mirrored arena split by a glowing pool. Every pillar, light and teleport pad has a twin across the mirror line — hunter and hider start as reflections of each other.",
 	},
+	"arena": {
+		"name": "The Arena",
+		"scene": "res://Scenes/Maps/Arena.tscn",
+		"description": "An open forest arena with trees, rocks, and a central cabin. Short sightlines force close-quarters cat-and-mouse.",
+	},
+	"city_map": {
+		"name": "Neon City",
+		"scene": "res://Scenes/Maps/CityMap.tscn",
+		"description": "A vast urban labyrinth of towers, alleys, rooftops, parked cars, and glowing billboard screens. Multiple elevation layers and district zones make every match feel different.",
+	},
 }
 const DEFAULT_MAP_ID := "echo_chamber"
 

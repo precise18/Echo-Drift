@@ -32,6 +32,7 @@ func _ready() -> void:
 	RoundManager.register_players_container(players_container)
 	if not echo_system.ghosts.is_empty():
 		hud.minimap.set_echo_ghost(echo_system.ghosts[0])
+	hud.set_echo_recorder(echo_system.recorder)
 
 	spawner.spawned.connect(_on_node_spawned)
 	RoundManager.role_assigned.connect(_on_role_assigned)

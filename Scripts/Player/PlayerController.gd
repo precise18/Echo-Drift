@@ -16,17 +16,36 @@ var is_mantling: bool = false
 
 var peer_id: int = -1
 
+const _SAMPLE1_IDLE := "res://Assets/Characters/animations/idle/sample_1_idle.glb"
+const _CANIMO_IDLE  := "res://Assets/Characters/canimo/animations/idle/sample_3_idle.glb"
+const _SAMPLE1_ANIMS := {
+	"walk":       "res://Assets/Characters/animations/walk/sample_1_walk.glb",
+	"run":        "res://Assets/Characters/animations/run/sample_1_run.glb",
+	"jump_start": "res://Assets/Characters/animations/jump_start/sample_1_jump_start.glb",
+	"jump":       "res://Assets/Characters/animations/jump/sample_1_jump.glb",
+	"jump_fall":  "res://Assets/Characters/animations/jump_fall/sample_1_jump_fall.glb",
+	"jump_end":   "res://Assets/Characters/animations/jump_end/sample_1_jump_end.glb",
+}
+const _CANIMO_ANIMS := {
+	"walk":       "res://Assets/Characters/canimo/animations/walk/sample_3_walk.glb",
+	"run":        "res://Assets/Characters/canimo/animations/run/sample_3_run.glb",
+	"jump_start": "res://Assets/Characters/canimo/animations/jump_start/sample_3_jump_start.glb",
+	"jump":       "res://Assets/Characters/canimo/animations/jump/sample_3_jump.glb",
+	"jump_fall":  "res://Assets/Characters/canimo/animations/jump_fall/sample_3_jump_fall.glb",
+	"jump_end":   "res://Assets/Characters/canimo/animations/jump_end/sample_3_jump_end.glb",
+}
+
 func _ready() -> void:
 	peer_id = name.to_int()
-	
+
 	anim.setup($Model/ModelInstance)
-	_autofit_model()   # coroutine — runs after first frame, doesn't block _ready
-	
+	_autofit_model()
+
 	_chest_ray = RayCast3D.new()
 	_head_ray = RayCast3D.new()
 	add_child(_chest_ray)
 	add_child(_head_ray)
-	
+
 	_chest_ray.position = Vector3(0, 1.2, 0)
 	_chest_ray.target_position = Vector3(0, 0, -0.6)
 	_head_ray.position = Vector3(0, 2.1, 0)
@@ -36,10 +55,15 @@ func _ready() -> void:
 	footsteps.name = "Footsteps"
 	footsteps.stream = SoundFactory.footstep()
 	add_child(footsteps)
-	
+
 	apply_authority_state()
 	_refresh_role_material()
 	RoundManager.role_assigned.connect(_on_role_assigned)
+
+	# Reconnect case: role was already assigned before this node was created
+	if RoundManager.hider_id == peer_id or RoundManager.hunter_id == peer_id:
+		_swap_character(peer_id == RoundManager.hider_id)
+		_refresh_role_material()
 
 func apply_authority_state() -> void:
 	if is_multiplayer_authority():
@@ -62,19 +86,61 @@ func _capture_mouse() -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
 func _on_role_assigned(_peer_id: int, _role: int) -> void:
+	_swap_character(peer_id == RoundManager.hider_id)
 	_refresh_role_material()
 
-func _refresh_role_material() -> void:
-	# Iterate through all mesh instances and update material override
-	var is_hunter = peer_id == RoundManager.hunter_id
-	var mat = HUNTER_MATERIAL if is_hunter else HIDER_MATERIAL
-	_apply_material_recursive($Model/ModelInstance, mat)
+## Replaces the ModelInstance under $Model with the character for the given role.
+## The new model's AnimationPlayer is fresh, so anim.setup() re-merges everything.
+func _swap_character(is_hider: bool) -> void:
+	var idle_path := _CANIMO_IDLE if is_hider else _SAMPLE1_IDLE
+	var anims := _CANIMO_ANIMS if is_hider else _SAMPLE1_ANIMS
 
-func _apply_material_recursive(node: Node, mat: Material) -> void:
+	var old: Node = $Model.get_node_or_null("ModelInstance")
+	if old:
+		old.name = "_old_model"
+		old.queue_free()
+
+	var scene: PackedScene = load(idle_path)
+	if not scene:
+		push_warning("PlayerController: could not load character model: " + idle_path)
+		return
+	var new_inst: Node3D = scene.instantiate()
+	new_inst.name = "ModelInstance"
+	$Model.add_child(new_inst)
+
+	anim.glb_walk       = anims["walk"]
+	anim.glb_run        = anims["run"]
+	anim.glb_jump_start = anims["jump_start"]
+	anim.glb_jump       = anims["jump"]
+	anim.glb_jump_fall  = anims["jump_fall"]
+	anim.glb_jump_end   = anims["jump_end"]
+	anim.setup(new_inst)
+	_autofit_model()
+
+func _refresh_role_material() -> void:
+	var model_inst := $Model.get_node_or_null("ModelInstance")
+	if model_inst == null:
+		return
+	# Use next_pass so the original character texture is preserved underneath
+	# and we only apply a semi-transparent team-colour tint on top.
+	var is_hunter := peer_id == RoundManager.hunter_id
+	var tint_mat := HUNTER_MATERIAL if is_hunter else HIDER_MATERIAL
+	_apply_tint_recursive(model_inst, tint_mat)
+
+func _apply_tint_recursive(node: Node, tint_mat: Material) -> void:
 	if node is MeshInstance3D:
-		node.material_override = mat
+		var mi := node as MeshInstance3D
+		# Clear any previous override so original surface materials show through
+		mi.material_override = null
+		# Apply tint as next_pass on each surface so original texture stays visible
+		for i in mi.get_surface_override_material_count():
+			var base = mi.mesh.surface_get_material(i)
+			if base:
+				base.next_pass = tint_mat
+			else:
+				mi.set_surface_override_material(i, tint_mat)
 	for child in node.get_children():
-		_apply_material_recursive(child, mat)
+		_apply_tint_recursive(child, tint_mat)
 
 func _execute_mantle() -> void:
 	is_mantling = true
@@ -98,7 +164,6 @@ func _physics_process(delta: float) -> void:
 		_last_position = global_position
 		
 		var h_speed = Vector2(pos_delta.x, pos_delta.z).length() / delta
-		var v_speed = pos_delta.y / delta
 		
 		if h_speed > 0.1:
 			anim.play("run" if h_speed > 5.0 else "walk")
@@ -130,11 +195,12 @@ func _physics_process(delta: float) -> void:
 
 	var is_airborne = movement.is_airborne()
 	
-	# Ledge Grabbing Logic
-	if is_airborne and movement.vertical_velocity() < 0.0:
-		if _chest_ray.is_colliding() and not _head_ray.is_colliding():
+	# Ledge Grabbing Logic & Airborne Animation
+	if is_airborne:
+		if movement.vertical_velocity() < 0.0 and _chest_ray.is_colliding() and not _head_ray.is_colliding():
 			_execute_mantle()
-		anim.play("jump_start" if movement.vertical_velocity() > 0 else "jump_fall")
+		else:
+			anim.play("jump_start" if movement.vertical_velocity() > 0 else "jump_fall")
 	elif movement.is_moving():
 		anim.play("run" if is_running else "walk")
 	else:
@@ -165,34 +231,49 @@ func _squash_and_stretch() -> void:
 	tween.tween_property(model, "scale", _base_scale, 0.1)
 
 func _autofit_model() -> void:
-	await get_tree().process_frame   
+	# Wait two frames: first for nodes to enter the tree, second for the
+	# skeleton/animation player to update bone transforms.
+	await get_tree().process_frame
+	await get_tree().process_frame
 	var model: Node3D = $Model
-	var aabb: AABB    = _node_aabb(model)
+
+	var aabb: AABB = _collect_aabb_local(model)
 	if aabb.size.y < 0.001:
 		push_warning("Player: model AABB is empty — auto-fit skipped.")
 		return
-	var s: float      = 1.8 / aabb.size.y   
-	model.scale       = Vector3(s, s, s)
-	model.position.y  = -(aabb.position.y * s) + 0.5  
 
-func _node_aabb(node: Node3D) -> AABB:
+	var s: float   = 1.8 / aabb.size.y   # scale so total height == capsule height
+	model.scale    = Vector3(s, s, s)
+	# Shift down so the mesh bottom lands exactly at y = 0
+	model.position = Vector3(0.0, -aabb.position.y * s, 0.0)
+
+	# Store the fitted scale as the base for squash-and-stretch
+	_base_scale = model.scale
+
+# Returns the combined AABB of all MeshInstance3D mesh resources,
+# in the mesh's native vertex space (which for GLTF skinned characters
+# equals the rig-root / $Model local space, since ModelInstance sits at
+# y=0 relative to $Model and the inverse-bind matrices bake the rest).
+# Using mesh.get_aabb() directly avoids the Skeleton3D offset that
+# Godot's GLTF importer inserts between the rig root and the mesh node,
+# which otherwise cancels the feet-offset and wrongly produces aabb.y=0.
+func _collect_aabb_local(node: Node) -> AABB:
 	var result := AABB()
 	var found  := false
 	if node is MeshInstance3D:
-		var a: AABB = (node as MeshInstance3D).get_aabb()
-		if a.size.length_squared() > 0.0:
-			result = node.transform * a
-			found  = true
-	for child: Node in node.get_children():
-		if not (child is Node3D):
-			continue
-		var ca: AABB = _node_aabb(child as Node3D)
+		var mi := node as MeshInstance3D
+		if mi.mesh:
+			var a := mi.mesh.get_aabb()
+			if a.size.length_squared() > 0.0:
+				result = a
+				found  = true
+	for child in node.get_children():
+		var ca: AABB = _collect_aabb_local(child)
 		if ca.size.length_squared() < 0.001:
 			continue
-		var in_parent: AABB = (child as Node3D).transform * ca
 		if found:
-			result = result.merge(in_parent)
+			result = result.merge(ca)
 		else:
-			result = in_parent
+			result = ca
 			found  = true
 	return result

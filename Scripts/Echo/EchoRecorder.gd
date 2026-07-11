@@ -74,6 +74,12 @@ func _current_animation_name() -> String:
 	return _target_anim_player.current_animation
 
 
+func buffer_fill_ratio() -> float:
+	if _samples.size() < 2:
+		return 0.0
+	return minf((_samples[-1]["t"] - _samples[0]["t"]) / buffer_seconds, 1.0)
+
+
 func has_enough_data() -> bool:
 	if _samples.size() < 2:
 		return false

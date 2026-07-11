@@ -23,18 +23,18 @@ func _ready() -> void:
 	
 	# Support for both Node3D and SpringArm3D
 	if _pitch is SpringArm3D:
-		_pitch.spring_length = distance
-		_pitch.collision_mask = 1 # Collide with world
+		(_pitch as SpringArm3D).spring_length = distance
+		(_pitch as SpringArm3D).collision_mask = 1 # Collide with world
 		_cam.transform = Transform3D()
 	else:
 		_cam.transform  = Transform3D(Basis.IDENTITY, Vector3(0.0, 0.0, distance))
 		
 	_pitch.rotation = Vector3(-0.18, 0.0, 0.0)  # ~10° downward
 	_cam.fov        = base_fov
-
 	
 	set_as_top_level(true) # Detach from player so we can add elastic lag
 	global_position = get_parent().global_position + Vector3(0, 1.4, 0)
+	_cam.make_current()  # Ensure this camera is always the active one
 
 func _physics_process(delta: float) -> void:
 	var target_pos = get_parent().global_position + Vector3(0, 1.4, 0)
@@ -70,5 +70,3 @@ func handle_mouse(event: InputEventMouseMotion) -> void:
 		_pitch.rotation.x - event.relative.y * sensitivity,
 		-PI / 2.5, PI / 6.0
 	)
-
-

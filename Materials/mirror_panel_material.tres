@@ -1,11 +1,11 @@
-[gd_resource type="StandardMaterial3D" format=3]
+[gd_resource type="StandardMaterial3D" format=3 uid="uid://lvp8yyen1ubv"]
 
 [resource]
 transparency = 1
-albedo_color = Color(0.75, 0.95, 1.0, 0.55)
+cull_mode = 2
+albedo_color = Color(0.75, 0.95, 1, 0.55)
 metallic = 0.8
 roughness = 0.1
 emission_enabled = true
-emission = Color(0.55, 0.95, 1.0, 1)
+emission = Color(0.55, 0.95, 1, 1)
 emission_energy_multiplier = 0.5
-cull_mode = 2

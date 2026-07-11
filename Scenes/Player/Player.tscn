@@ -1,13 +1,13 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://ddde3jhtkgkhu"]
 
-[ext_resource type="Script" path="res://Scripts/Player/PlayerController.gd" id="1"]
-[ext_resource type="PackedScene" path="res://Assets/Characters/animations/idle/sample_1_idle.glb" id="2"]
-[ext_resource type="Script" path="res://Scripts/Player/components/movement_component.gd" id="3"]
-[ext_resource type="Script" path="res://Scripts/Player/components/animation_component.gd" id="4"]
-[ext_resource type="Script" path="res://Scripts/Player/components/camera_component.gd" id="5"]
+[ext_resource type="Script" uid="uid://xx0b1ianrjgk" path="res://Scripts/Player/PlayerController.gd" id="1"]
+[ext_resource type="PackedScene" uid="uid://dn8ogr37a5tb1" path="res://Assets/Characters/animations/idle/sample_1_idle.glb" id="2"]
+[ext_resource type="Script" uid="uid://bcixw2phoyx5m" path="res://Scripts/Player/components/movement_component.gd" id="3"]
+[ext_resource type="Script" uid="uid://dg7c5xv1nmj04" path="res://Scripts/Player/components/animation_component.gd" id="4"]
+[ext_resource type="Script" uid="uid://bf055mg0ucgla" path="res://Scripts/Player/components/camera_component.gd" id="5"]
 
 [sub_resource type="CapsuleShape3D" id="6"]
-radius = 0.3
+radius = 0.28
 height = 1.8
 
 [sub_resource type="SceneReplicationConfig" id="SceneReplicationConfig_player"]
@@ -38,16 +38,10 @@ script = ExtResource("4")
 [node name="CameraYaw" type="Node3D" parent="." unique_id=503366752]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
 script = ExtResource("5")
-distance = null
-sensitivity = null
-follow_speed = null
 
 [node name="CameraPitch" type="SpringArm3D" parent="CameraYaw" unique_id=780801524]
 
 [node name="Camera3D" type="Camera3D" parent="CameraYaw/CameraPitch" unique_id=420976325]
-transform = Transform3D(-0.9988905, -0.009360589, 0.046152655, 9.421818e-05, 0.9796467, 0.20072922, -0.04709223, 0.20051077, -0.978559, 4.340447, 51.31243, -86.365074)
 
-[node name="MultiplayerSynchronizer" type="MultiplayerSynchronizer" parent="."]
+[node name="MultiplayerSynchronizer" type="MultiplayerSynchronizer" parent="." unique_id=156419380]
 replication_config = SubResource("SceneReplicationConfig_player")
-
-

@@ -1,0 +1,21 @@
+[gd_resource type="StandardMaterial3D" format=3 uid="uid://cabin_mat_echod"]
+
+[ext_resource type="Texture2D" path="res://Assets/Textures/cabin/color.png" id="1"]
+[ext_resource type="Texture2D" path="res://Assets/Textures/cabin/normal.png" id="2"]
+[ext_resource type="Texture2D" path="res://Assets/Textures/cabin/roughness.png" id="3"]
+[ext_resource type="Texture2D" path="res://Assets/Textures/cabin/ao.png" id="4"]
+
+[resource]
+albedo_color = Color(0.8, 0.75, 0.65, 1)
+albedo_texture = ExtResource("1")
+roughness = 1.0
+roughness_texture = ExtResource("3")
+roughness_texture_channel = 0
+normal_enabled = true
+normal_scale = 1.2
+normal_texture = ExtResource("2")
+ao_enabled = true
+ao_light_affect = 0.7
+ao_texture = ExtResource("4")
+ao_texture_channel = 0
+uv1_scale = Vector3(1.5, 1.5, 1.5)

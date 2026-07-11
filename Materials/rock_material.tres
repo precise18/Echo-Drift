@@ -1,22 +1,21 @@
-[gd_resource type="StandardMaterial3D" load_steps=3 format=3]
+[gd_resource type="StandardMaterial3D" format=3 uid="uid://x4b2053nvbri"]
 
-[sub_resource type="FastNoiseLite" id="FastNoiseLite_rock"]
-noise_type = 1
-frequency = 0.25
-
-[sub_resource type="NoiseTexture2D" id="NoiseTexture2D_rock"]
-width = 128
-height = 128
-seamless = true
-as_normal_map = true
-bump_strength = 5.0
-noise = SubResource("FastNoiseLite_rock")
+[ext_resource type="Texture2D" path="res://Assets/Textures/rock/color.png" id="1"]
+[ext_resource type="Texture2D" path="res://Assets/Textures/rock/normal.png" id="2"]
+[ext_resource type="Texture2D" path="res://Assets/Textures/rock/roughness.png" id="3"]
+[ext_resource type="Texture2D" path="res://Assets/Textures/rock/ao.png" id="4"]
 
 [resource]
-albedo_color = Color(0.55, 0.55, 0.58, 1)
+albedo_color = Color(0.85, 0.85, 0.85, 1)
+albedo_texture = ExtResource("1")
 roughness = 1.0
-metallic = 0.0
+roughness_texture = ExtResource("3")
+roughness_texture_channel = 0
 normal_enabled = true
-normal_texture = SubResource("NoiseTexture2D_rock")
-normal_scale = 0.5
-uv1_scale = Vector3(3, 3, 3)
+normal_scale = 2.0
+normal_texture = ExtResource("2")
+ao_enabled = true
+ao_light_affect = 0.9
+ao_texture = ExtResource("4")
+ao_texture_channel = 0
+uv1_scale = Vector3(2.0, 2.0, 2.0)
