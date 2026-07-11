@@ -12,6 +12,7 @@ const CAPTURE_COLOR := Color(1.0, 0.75, 0.3) # warm gold — distinct from the e
 @onready var players_container: Node3D = $Players
 @onready var spawner: MultiplayerSpawner = $MultiplayerSpawner
 @onready var echo_system: EchoSystem = $EchoSystem
+@onready var hud: CanvasLayer = $HUD
 
 
 func _ready() -> void:
@@ -29,6 +30,8 @@ func _ready() -> void:
 		MapManager.map_selected.connect(_on_map_ready, CONNECT_ONE_SHOT)
 
 	RoundManager.register_players_container(players_container)
+	if not echo_system.ghosts.is_empty():
+		hud.minimap.set_echo_ghost(echo_system.ghosts[0])
 
 	spawner.spawned.connect(_on_node_spawned)
 	RoundManager.role_assigned.connect(_on_role_assigned)
@@ -45,7 +48,9 @@ func _ready() -> void:
 
 
 func _load_map() -> void:
-	map_container.add_child(MapManager.instantiate_selected_map())
+	var map_root := MapManager.instantiate_selected_map()
+	map_container.add_child(map_root)
+	hud.minimap.setup(map_root)
 
 
 func _on_map_ready(_map_id: String) -> void:
@@ -123,6 +128,8 @@ func _spawn_player(peer_id: int) -> void:
 	# _on_node_spawned does on clients.
 	player.set_multiplayer_authority(peer_id)
 	player.apply_authority_state()
+	if player.is_multiplayer_authority():
+		hud.minimap.set_local_player(player)
 
 
 ## Runs on every receiving peer whenever a player node appears under
@@ -137,6 +144,8 @@ func _on_node_spawned(node: Node) -> void:
 		node.set_multiplayer_authority(node_name.to_int())
 		if node.has_method("apply_authority_state"):
 			node.apply_authority_state()
+		if node.is_multiplayer_authority():
+			hud.minimap.set_local_player(node as Node3D)
 
 
 func _on_role_assigned(peer_id: int, role: int) -> void:

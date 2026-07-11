@@ -93,6 +93,12 @@ Two instances on one machine unless stated. ☐ = check.
   spawn overlap — grace period).
 - ☐ Teleport pads: whoosh + burst at both ends, on both windows;
   1-second cooldown (no ping-pong).
+- ☐ Minimap (bottom-right, both windows): obstacle blips match the loaded
+  map's layout; your own arrow tracks position and rotates with facing;
+  no cyan echo dot for the first ~10 s; as **Hunter**, a cyan dot tracks
+  the echo ghost once it appears; as **Hider**, no cyan dot ever appears
+  (the opponent's live position is never shown, only the delayed echo,
+  and only to the Hunter).
 
 ### Match end
 - ☐ First to 3 wins → Game Over (VICTORY on winner's screen, DEFEAT on

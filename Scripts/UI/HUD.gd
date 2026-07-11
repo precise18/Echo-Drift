@@ -46,6 +46,10 @@ var _pause_main: VBoxContainer
 var _pause_settings: VBoxContainer
 var _paused := false
 
+# Minimap. Public (unlike everything else here) so Main.gd can reach it
+# directly as hud.minimap to wire up the map, echo ghost, and local player.
+var minimap: Minimap
+
 var _connection_status_label: Label
 var _grace_deadline := -1.0
 
@@ -72,6 +76,7 @@ func _ready() -> void:
 	_build_game_over_panel()
 	_build_pause_panel()
 	_build_connection_status()
+	_build_minimap()
 
 	RoundManager.round_started.connect(_on_round_started)
 	RoundManager.round_ended.connect(_on_round_ended)
@@ -321,6 +326,18 @@ func _build_connection_status() -> void:
 	_connection_status_label.offset_right = 300
 	_connection_status_label.visible = false
 	_root.add_child(_connection_status_label)
+
+
+func _build_minimap() -> void:
+	minimap = Minimap.new()
+	minimap.custom_minimum_size = Vector2(170, 170)
+	minimap.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	minimap.offset_left = -190
+	minimap.offset_top = -190
+	minimap.offset_right = -20
+	minimap.offset_bottom = -20
+	minimap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_root.add_child(minimap)
 
 
 # ---------------------------------------------------------------------------
