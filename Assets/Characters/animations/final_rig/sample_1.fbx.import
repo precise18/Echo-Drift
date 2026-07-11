@@ -4,12 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://cadpwbci8aiep"
-path="res://.godot/imported/sample_1.fbx-be77704eafb8367b1d3c6ce431b6a2b1.scn"
+path="res://.godot/imported/sample_1.fbx-7c19587e6764ae5ceed050f77f75147c.scn"
 
 [deps]
 
-source_file="res://animations/final_rig/sample_1.fbx"
-dest_files=["res://.godot/imported/sample_1.fbx-be77704eafb8367b1d3c6ce431b6a2b1.scn"]
+source_file="res://Assets/Characters/animations/final_rig/sample_1.fbx"
+dest_files=["res://.godot/imported/sample_1.fbx-7c19587e6764ae5ceed050f77f75147c.scn"]
 
 [params]
 

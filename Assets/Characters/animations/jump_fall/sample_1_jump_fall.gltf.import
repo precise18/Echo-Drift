@@ -4,12 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://cqhn5n7u6ot7u"
-path="res://.godot/imported/sample_1_jump_fall.gltf-aad4956d8dce657f12de6f2c2f64cb7f.scn"
+path="res://.godot/imported/sample_1_jump_fall.gltf-818f1b5d6d27466dfa1ec49ae321b594.scn"
 
 [deps]
 
-source_file="res://animations/jump_fall/sample_1_jump_fall.gltf"
-dest_files=["res://.godot/imported/sample_1_jump_fall.gltf-aad4956d8dce657f12de6f2c2f64cb7f.scn"]
+source_file="res://Assets/Characters/animations/jump_fall/sample_1_jump_fall.gltf"
+dest_files=["res://.godot/imported/sample_1_jump_fall.gltf-818f1b5d6d27466dfa1ec49ae321b594.scn"]
 
 [params]
 

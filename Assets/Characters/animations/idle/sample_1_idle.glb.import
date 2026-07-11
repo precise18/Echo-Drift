@@ -4,12 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://dn8ogr37a5tb1"
-path="res://.godot/imported/sample_1_idle.glb-84f881ec0cd6c81f39c1a7c821f9bf19.scn"
+path="res://.godot/imported/sample_1_idle.glb-a6d2a42dfc1b6be1aa29ef482141e7c6.scn"
 
 [deps]
 
-source_file="res://animations/idle/sample_1_idle.glb"
-dest_files=["res://.godot/imported/sample_1_idle.glb-84f881ec0cd6c81f39c1a7c821f9bf19.scn"]
+source_file="res://Assets/Characters/animations/idle/sample_1_idle.glb"
+dest_files=["res://.godot/imported/sample_1_idle.glb-a6d2a42dfc1b6be1aa29ef482141e7c6.scn"]
 
 [params]
 

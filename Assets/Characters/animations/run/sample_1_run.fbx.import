@@ -4,12 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://c3aaxygrwnbod"
-path="res://.godot/imported/sample_1_run.fbx-d615074a1365108c67652caeab7abf3f.scn"
+path="res://.godot/imported/sample_1_run.fbx-9017d5e11275e37c8f64f9fb08a269f9.scn"
 
 [deps]
 
-source_file="res://animations/run/sample_1_run.fbx"
-dest_files=["res://.godot/imported/sample_1_run.fbx-d615074a1365108c67652caeab7abf3f.scn"]
+source_file="res://Assets/Characters/animations/run/sample_1_run.fbx"
+dest_files=["res://.godot/imported/sample_1_run.fbx-9017d5e11275e37c8f64f9fb08a269f9.scn"]
 
 [params]
 

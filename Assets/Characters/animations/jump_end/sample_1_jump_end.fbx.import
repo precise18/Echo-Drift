@@ -4,12 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://cegfy5s7rxtfi"
-path="res://.godot/imported/sample_1_jump_end.fbx-02a56ee765f2f3db1030c5cd0166f21c.scn"
+path="res://.godot/imported/sample_1_jump_end.fbx-8ba1324c3d8604b54a7e5eb7dab8be5f.scn"
 
 [deps]
 
-source_file="res://animations/jump_end/sample_1_jump_end.fbx"
-dest_files=["res://.godot/imported/sample_1_jump_end.fbx-02a56ee765f2f3db1030c5cd0166f21c.scn"]
+source_file="res://Assets/Characters/animations/jump_end/sample_1_jump_end.fbx"
+dest_files=["res://.godot/imported/sample_1_jump_end.fbx-8ba1324c3d8604b54a7e5eb7dab8be5f.scn"]
 
 [params]
 

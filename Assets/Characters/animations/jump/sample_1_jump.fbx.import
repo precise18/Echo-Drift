@@ -4,12 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://c0243v1monhg7"
-path="res://.godot/imported/sample_1_jump.fbx-33acacef36136ddae5f1312b5314c0f7.scn"
+path="res://.godot/imported/sample_1_jump.fbx-8f7c4418852b81bcb388ba6e67e8d277.scn"
 
 [deps]
 
-source_file="res://animations/jump/sample_1_jump.fbx"
-dest_files=["res://.godot/imported/sample_1_jump.fbx-33acacef36136ddae5f1312b5314c0f7.scn"]
+source_file="res://Assets/Characters/animations/jump/sample_1_jump.fbx"
+dest_files=["res://.godot/imported/sample_1_jump.fbx-8f7c4418852b81bcb388ba6e67e8d277.scn"]
 
 [params]
 

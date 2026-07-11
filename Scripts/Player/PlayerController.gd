@@ -3,9 +3,9 @@ extends CharacterBody3D
 var HIDER_MATERIAL: Material = load("res://Materials/player_hider_material.tres")
 var HUNTER_MATERIAL: Material = load("res://Materials/player_hunter_material.tres")
 
-@onready var movement: Node   = $MovementComponent
-@onready var camera:   Node3D = $CameraYaw
-@onready var anim:     Node   = $AnimationComponent
+@onready var movement = $MovementComponent
+@onready var camera = $CameraYaw
+@onready var anim = $AnimationComponent
 
 var _was_airborne := false
 var _base_scale := Vector3.ONE
@@ -43,7 +43,7 @@ func _ready() -> void:
 
 func apply_authority_state() -> void:
 	if is_multiplayer_authority():
-		camera._cam.make_current()
+		$CameraYaw/CameraPitch/Camera3D.make_current()
 		if not get_window().focus_entered.is_connected(_capture_mouse):
 			get_window().focus_entered.connect(_capture_mouse)
 		_capture_mouse()

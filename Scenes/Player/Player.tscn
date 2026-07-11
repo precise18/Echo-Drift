@@ -1,10 +1,10 @@
-[gd_scene format=3 uid="uid://dur85nxfwynaj"]
+[gd_scene format=3]
 
-[ext_resource type="Script" uid="uid://cbamwdpscfeoh" path="res://Scripts/Player/PlayerController.gd" id="1"]
-[ext_resource type="PackedScene" uid="uid://dn8ogr37a5tb1" path="res://Assets/Characters/animations/idle/sample_1_idle.glb" id="2"]
-[ext_resource type="Script" uid="uid://bcixw2phoyx5m" path="res://Scripts/Player/components/movement_component.gd" id="3"]
-[ext_resource type="Script" uid="uid://dg7c5xv1nmj04" path="res://Scripts/Player/components/animation_component.gd" id="4"]
-[ext_resource type="Script" uid="uid://bf055mg0ucgla" path="res://Scripts/Player/components/camera_component.gd" id="5"]
+[ext_resource type="Script" path="res://Scripts/Player/PlayerController.gd" id="1"]
+[ext_resource type="PackedScene" path="res://Assets/Characters/animations/idle/sample_1_idle.glb" id="2"]
+[ext_resource type="Script" path="res://Scripts/Player/components/movement_component.gd" id="3"]
+[ext_resource type="Script" path="res://Scripts/Player/components/animation_component.gd" id="4"]
+[ext_resource type="Script" path="res://Scripts/Player/components/camera_component.gd" id="5"]
 
 [sub_resource type="CapsuleShape3D" id="6"]
 radius = 0.3

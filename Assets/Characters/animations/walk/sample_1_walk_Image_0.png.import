@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://0q3fxbllls2g"
-path.s3tc="res://.godot/imported/sample_1_walk_Image_0.png-c61f82e9254a173cfe29d6fa166b84f1.s3tc.ctex"
+path.s3tc="res://.godot/imported/sample_1_walk_Image_0.png-bca08e00b941bc541803529b0b33babf.s3tc.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc"],
 "vram_texture": true
@@ -14,8 +14,8 @@ generator_parameters={
 
 [deps]
 
-source_file="res://animations/walk/sample_1_walk_Image_0.png"
-dest_files=["res://.godot/imported/sample_1_walk_Image_0.png-c61f82e9254a173cfe29d6fa166b84f1.s3tc.ctex"]
+source_file="res://Assets/Characters/animations/walk/sample_1_walk_Image_0.png"
+dest_files=["res://.godot/imported/sample_1_walk_Image_0.png-bca08e00b941bc541803529b0b33babf.s3tc.ctex"]
 
 [params]
 

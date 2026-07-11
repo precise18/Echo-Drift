@@ -4,12 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://dc6snmxpttqfd"
-path="res://.godot/imported/sample_1_walk_embedded.gltf-f729eb4e1b3fb804804fad6a63007354.scn"
+path="res://.godot/imported/sample_1_walk_embedded.gltf-c66c5af4105c9663eba1588fc2790e3c.scn"
 
 [deps]
 
-source_file="res://animations/walk/sample_1_walk_embedded.gltf"
-dest_files=["res://.godot/imported/sample_1_walk_embedded.gltf-f729eb4e1b3fb804804fad6a63007354.scn"]
+source_file="res://Assets/Characters/animations/walk/sample_1_walk_embedded.gltf"
+dest_files=["res://.godot/imported/sample_1_walk_embedded.gltf-c66c5af4105c9663eba1588fc2790e3c.scn"]
 
 [params]
 

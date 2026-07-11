@@ -3,7 +3,7 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://8dywmvngw00e"
-path.s3tc="res://.godot/imported/sample_1_jump_Image_0.png-9ac600f79e5d96f073f653dc84ee8dda.s3tc.ctex"
+path.s3tc="res://.godot/imported/sample_1_jump_Image_0.png-dbf0ba691788ed8311080963dcf3df51.s3tc.ctex"
 metadata={
 "imported_formats": ["s3tc_bptc"],
 "vram_texture": true
@@ -14,8 +14,8 @@ generator_parameters={
 
 [deps]
 
-source_file="res://animations/jump/sample_1_jump_Image_0.png"
-dest_files=["res://.godot/imported/sample_1_jump_Image_0.png-9ac600f79e5d96f073f653dc84ee8dda.s3tc.ctex"]
+source_file="res://Assets/Characters/animations/jump/sample_1_jump_Image_0.png"
+dest_files=["res://.godot/imported/sample_1_jump_Image_0.png-dbf0ba691788ed8311080963dcf3df51.s3tc.ctex"]
 
 [params]
 
