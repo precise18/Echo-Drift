@@ -126,7 +126,7 @@ func start_match() -> void:
 func start_round() -> void:
 	if not multiplayer.is_server():
 		return
-	var roles := RoleManager.assign_roles(NetworkManager.connected_peer_ids, _next_hider_id)
+	var roles := RoleManager.assign_roles(NetworkManager.connected_peer_ids, _next_hider_id, NetworkManager.peer_preferred_roles)
 	if roles.is_empty():
 		return
 	_apply_round_state.rpc(roles["hider_id"], roles["hunter_id"], ROUND_TIME)

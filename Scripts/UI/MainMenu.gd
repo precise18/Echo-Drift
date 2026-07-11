@@ -101,6 +101,23 @@ func _build_title_screen() -> Control:
 	vbox.add_child(quit)
 
 	vbox.add_child(_spacer(10))
+	vbox.add_child(UIKit.make_title("Preferred Role", 14, UIKit.COLOR_MUTED))
+	var role_group := ButtonGroup.new()
+	var role_hbox := HBoxContainer.new()
+	role_hbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	role_hbox.add_theme_constant_override("separation", 10)
+	
+	var roles = ["Any", "Hider", "Hunter"]
+	for i in range(roles.size()):
+		var btn := UIKit.make_button(roles[i])
+		btn.toggle_mode = true
+		btn.button_group = role_group
+		btn.button_pressed = (GameSettings.preferred_role == i)
+		btn.pressed.connect(func(): GameSettings.set_preferred_role(i))
+		role_hbox.add_child(btn)
+	vbox.add_child(role_hbox)
+
+	vbox.add_child(_spacer(10))
 	_notice_label = UIKit.make_title("", 15, UIKit.COLOR_GOLD)
 	vbox.add_child(_notice_label)
 	vbox.add_child(UIKit.make_title("2-player LAN  •  built with Godot", 12, UIKit.COLOR_MUTED))

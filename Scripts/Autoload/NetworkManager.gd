@@ -46,6 +46,7 @@ var last_disconnect_reason := ""
 # Server-only bookkeeping.
 var _peer_sessions: Dictionary = {} # peer_id -> session_id
 var _disconnected_sessions: Dictionary = {} # session_id -> {role, expires_at}
+var peer_preferred_roles: Dictionary = {} # peer_id -> preferred_role (0: Any, 1: Hider, 2: Hunter)
 
 
 func _ready() -> void:
@@ -70,6 +71,7 @@ func host_game() -> Error:
 
 func enter_game_as_host() -> void:
 	connected_peer_ids = [1] # the host is always peer id 1
+	_register_session(local_session_id, GameSettings.preferred_role)
 	TransitionScreen.cover("Entering %s..." % MapManager.get_map_name(MapManager.selected_map_id))
 	get_tree().change_scene_to_file(GAME_SCENE)
 
@@ -108,7 +110,7 @@ func _on_peer_disconnected(id: int) -> void:
 
 func _on_connected_to_server() -> void:
 	connected_peer_ids = [1, multiplayer.get_unique_id()]
-	_register_session.rpc_id(1, local_session_id)
+	_register_session.rpc_id(1, local_session_id, GameSettings.preferred_role)
 	# Load immediately rather than waiting for MapManager's sync RPC —
 	# Godot's own MultiplayerSpawner replication for already-spawned
 	# nodes (e.g. the host's own player) can arrive as soon as the ENet
@@ -150,6 +152,7 @@ func leave_game() -> void:
 	connected_peer_ids.clear()
 	_peer_sessions.clear()
 	_disconnected_sessions.clear()
+	peer_preferred_roles.clear()
 	RoundManager.reset_state()
 	UIKit.block_mouse_capture = false
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
@@ -161,12 +164,13 @@ func leave_game() -> void:
 ## Only the server acts on it; harmless no-op on the caller's own machine
 ## otherwise (call_local fires this locally too, guarded below).
 @rpc("any_peer", "call_local", "reliable")
-func _register_session(session_id: String) -> void:
+func _register_session(session_id: String, preferred_role: int = 0) -> void:
 	if not multiplayer.is_server():
 		return
 	var sender_id := multiplayer.get_remote_sender_id()
 	var peer_id := sender_id if sender_id != 0 else 1
 	_peer_sessions[peer_id] = session_id
+	peer_preferred_roles[peer_id] = preferred_role
 
 	if not _disconnected_sessions.has(session_id):
 		return # a fresh join, not a reconnect — nothing more to do

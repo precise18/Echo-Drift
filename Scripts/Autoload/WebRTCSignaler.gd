@@ -14,6 +14,7 @@ var server_url := "wss://echo-relay.onrender.com"
 
 var _pending_action := ""
 var current_room_code := ""
+var is_quick_play := false
 
 func _ready():
 	set_process(false)
@@ -49,6 +50,7 @@ func start_host():
 	stop()
 	ws = WebSocketPeer.new()
 	webrtc_mp = WebRTCMultiplayerPeer.new()
+	is_quick_play = false
 	is_host = true
 	webrtc_mp.create_server()
 	multiplayer.multiplayer_peer = webrtc_mp
@@ -61,6 +63,7 @@ func start_client(room_code: String):
 	stop()
 	ws = WebSocketPeer.new()
 	webrtc_mp = WebRTCMultiplayerPeer.new()
+	is_quick_play = false
 	is_host = false
 	_pending_action = JSON.stringify({"type": "join_room", "room": room_code})
 	var err = ws.connect_to_url(server_url)
@@ -71,6 +74,7 @@ func start_quick_play():
 	stop()
 	ws = WebSocketPeer.new()
 	webrtc_mp = WebRTCMultiplayerPeer.new()
+	is_quick_play = true
 	is_host = false
 	_pending_action = JSON.stringify({"type": "quick_play"})
 	var err = ws.connect_to_url(server_url)
