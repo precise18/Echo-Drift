@@ -115,6 +115,11 @@ func _process(_delta: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("ui_focus_next") and MatchStateManager.is_in_lobby():
+		_lobby_panel.visible = not _lobby_panel.visible
+		_update_mouse()
+		return
+		
 	if not event.is_action_pressed("ui_cancel"):
 		return
 	# Game over demands a decision (Rematch / Leave); ESC won't dismiss it.
@@ -174,6 +179,10 @@ func _build_lobby_panel() -> void:
 
 	_lobby_room_code_label = UIKit.make_title("", 18, UIKit.COLOR_GOLD)
 	content.add_child(_lobby_room_code_label)
+	
+	var tab_hint := UIKit.make_paragraph("Press [TAB] to hide this menu and practice driving.", 13)
+	tab_hint.add_theme_color_override("font_color", UIKit.COLOR_MUTED)
+	content.add_child(tab_hint)
 
 	_lobby_start_button = UIKit.make_button("Start Match")
 	_lobby_start_button.pressed.connect(func() -> void: RoundManager.start_match())
