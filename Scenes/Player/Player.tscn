@@ -10,6 +10,14 @@
 radius = 0.3
 height = 1.8
 
+[sub_resource type="SceneReplicationConfig" id="SceneReplicationConfig_player"]
+properties/0/path = NodePath(".:position")
+properties/0/spawn = true
+properties/0/replication_mode = 2
+properties/1/path = NodePath("Model:rotation:y")
+properties/1/spawn = true
+properties/1/replication_mode = 2
+
 [node name="Player" type="CharacterBody3D" unique_id=1048418180]
 script = ExtResource("1")
 
@@ -39,13 +47,7 @@ follow_speed = null
 [node name="Camera3D" type="Camera3D" parent="CameraYaw/CameraPitch" unique_id=420976325]
 transform = Transform3D(-0.9988905, -0.009360589, 0.046152655, 9.421818e-05, 0.9796467, 0.20072922, -0.04709223, 0.20051077, -0.978559, 4.340447, 51.31243, -86.365074)
 
-[sub_resource type="SceneReplicationConfig" id="SceneReplicationConfig_player"]
-properties/0/path = NodePath(".:position")
-properties/0/spawn = true
-properties/0/replication_mode = 2
-properties/1/path = NodePath("Model:rotation:y")
-properties/1/spawn = true
-properties/1/replication_mode = 2
-
 [node name="MultiplayerSynchronizer" type="MultiplayerSynchronizer" parent="."]
 replication_config = SubResource("SceneReplicationConfig_player")
+
+
