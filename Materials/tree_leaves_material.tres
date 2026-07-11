@@ -1,6 +1,15 @@
-[gd_resource type="StandardMaterial3D" format=3]
+[gd_resource type="StandardMaterial3D" format=3 uid="uid://leaves_mat_echod"]
 
 [resource]
-albedo_color = Color(0.3, 0.52, 0.3, 1)
+albedo_color = Color(0.1, 0.22, 0.08, 1)
 roughness = 0.85
 metallic = 0.0
+subsurf_scatter_enabled = true
+subsurf_scatter_strength = 0.3
+subsurf_scatter_skin_mode = false
+subsurf_scatter_transmittance_enabled = true
+subsurf_scatter_transmittance_color = Color(0.15, 0.55, 0.1, 1)
+subsurf_scatter_transmittance_depth = 0.12
+rim_enabled = true
+rim = 0.15
+rim_tint = 0.2

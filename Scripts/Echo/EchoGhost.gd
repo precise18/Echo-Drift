@@ -55,6 +55,7 @@ var recorder: EchoRecorder = null
 var _current_anim := ""
 var _trail: GPUParticles3D
 var _footsteps: FootstepEmitter
+var _last_echo_position := Vector3.ZERO
 var _timeline_label: Label3D
 var _timeline_ring: MeshInstance3D
 
@@ -108,11 +109,20 @@ func _process(delta: float) -> void:
 		return
 
 	_set_active(true)
-	# One buffer lookup per frame answers both position and animation
-	# (see EchoRecorder.sample_at).
 	var sample := recorder.sample_at(delay_seconds)
 	global_transform = sample["xform"]
-	_update_animation(sample["anim"])
+
+	# _current_anim is cleared by _set_active(false), so an empty string
+	# means the ghost just became visible — seed the position tracker so
+	# the first delta is zero and we start in Idle rather than a false sprint.
+	if _current_anim == "":
+		_last_echo_position = global_position
+
+	var h_speed := Vector2(global_position.x - _last_echo_position.x,
+			global_position.z - _last_echo_position.z).length() / maxf(delta, 0.001)
+	_last_echo_position = global_position
+
+	_update_animation("Run" if h_speed > 5.0 else ("Walk" if h_speed > 0.1 else "Idle"))
 
 
 func _update_animation(anim_name: String) -> void:

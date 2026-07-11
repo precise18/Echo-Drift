@@ -24,6 +24,11 @@ const ECHO_GHOST_SCENE: PackedScene = preload("res://Scenes/Player/EchoGhost.tsc
 
 var recorder: EchoRecorder
 
+## Public so callers that only care about "the" echo (e.g. Minimap showing
+## the primary ghost to the Hunter) don't need to know EchoRecorder exists;
+## indexed in the same order as echo_delays.
+var ghosts: Array[EchoGhost] = []
+
 
 func _ready() -> void:
 	recorder = EchoRecorder.new()
@@ -36,6 +41,7 @@ func _ready() -> void:
 		add_child(ghost)
 		ghost.recorder = recorder
 		ghost.delay_seconds = delay
+		ghosts.append(ghost)
 
 
 ## Begins echoing a new target (typically called when the round's Hider

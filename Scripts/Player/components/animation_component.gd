@@ -21,6 +21,7 @@ var _model_root:  Node3D          = null
 var _current:     String          = ""
 
 func setup(model_root: Node3D) -> void:
+	_current     = ""   # reset so play() doesn't skip the first call on a fresh model
 	_model_root  = model_root
 	_anim_player = _find_anim_player(model_root)
 	if not _anim_player:
