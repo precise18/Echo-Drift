@@ -1,8 +1,4 @@
-<<<<<<< HEAD
-[gd_scene load_steps=8 format=3]
-=======
 [gd_scene format=3 uid="uid://gypdc1cs7cf6"]
->>>>>>> 1642334 (b4)
 
 [ext_resource type="Script" uid="uid://xx0b1ianrjgk" path="res://Scripts/Player/PlayerController.gd" id="1_ctrl"]
 [ext_resource type="Material" path="res://Materials/player_hider_material.tres" id="2_mat"]
@@ -19,8 +15,7 @@ height = 1.6
 [sub_resource type="BoxMesh" id="BoxMesh_face"]
 size = Vector3(0.16, 0.16, 0.06)
 
-<<<<<<< HEAD
-=======
+
 [sub_resource type="Animation" id="Animation_idle"]
 resource_name = "Idle"
 length = 1.4
@@ -79,7 +74,7 @@ _data = {
 &"Walk": SubResource("Animation_walk")
 }
 
->>>>>>> 1642334 (b4)
+
 [sub_resource type="SceneReplicationConfig" id="SceneReplicationConfig_player"]
 properties/0/path = NodePath(".:position")
 properties/0/spawn = true
@@ -118,15 +113,8 @@ margin = 0.3
 [node name="Camera3D" type="Camera3D" parent="CameraPivot/SpringArm3D" unique_id=630586741]
 transform = Transform3D(-1, 0, 8.74228e-08, 0, 1, 0, -8.74228e-08, 0, -1, -2.0922471e-07, 0, -2.3932512)
 
-<<<<<<< HEAD
-[node name="AnimPlayer" type="AnimationPlayer" parent="."]
-libraries = {
-"": ExtResource("3_anims")
-}
-=======
 [node name="AnimPlayer" type="AnimationPlayer" parent="." unique_id=382963793]
 libraries/ = SubResource("AnimationLibrary_anims")
->>>>>>> 1642334 (b4)
 
 [node name="MultiplayerSynchronizer" type="MultiplayerSynchronizer" parent="." unique_id=1390173532]
 replication_config = SubResource("SceneReplicationConfig_player")

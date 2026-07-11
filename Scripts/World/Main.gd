@@ -5,7 +5,7 @@ extends Node3D
 ## in MapManager — this script only connects the scene tree to those
 ## systems.
 
-const PLAYER_SCENE := preload("res://Scenes/Player/Player.tscn")
+const PLAYER_SCENE: PackedScene = preload("res://Scenes/Player/Player.tscn")
 const CAPTURE_COLOR := Color(1.0, 0.75, 0.3) # warm gold — distinct from the echo system's cyan
 
 @onready var map_container: Node3D = $MapContainer
