@@ -109,6 +109,44 @@ static func make_title(text: String, font_size := 42, color := COLOR_ACCENT) -> 
 	return label
 
 
+## A title with a faint, vertically-mirrored echo of itself directly
+## beneath it — the same "reflection" language the arena's mirror pool
+## and mirror panels already use, brought into the UI (see
+## THEME_POLISH_REPORT.md). Returns a Control sized to hold both; use it
+## anywhere `make_title()` would otherwise go for STATIC text. For text
+## that changes at runtime, build the two labels directly and keep both
+## in sync yourself (see HUD.gd's game-over headline) — flipping a
+## Label needs its real size, which isn't known until after it's first
+## laid out (see the `resized` connection below), so a single reusable
+## widget can't easily hand back "just update this one string" for a
+## composite of two labels.
+static func make_reflected_title(text: String, font_size := 42, color := COLOR_ACCENT) -> Control:
+	var wrap := VBoxContainer.new()
+	wrap.add_theme_constant_override("separation", 0)
+	wrap.alignment = BoxContainer.ALIGNMENT_CENTER
+	wrap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	wrap.add_child(make_title(text, font_size, color))
+	wrap.add_child(make_reflection_label(make_title(text, font_size, color)))
+
+	return wrap
+
+
+## Turns an already-built title Label into a faded, flipped-in-place
+## "reflection" of itself and returns it (caller adds it to the tree).
+## Flipping around the label's own center — set once its real size is
+## known via the `resized` signal, not at construction, when Control
+## rects are still zero — keeps the mirrored copy sitting exactly where
+## a plain (non-flipped) label would have gone, instead of flying off to
+## the wrong side of its pivot.
+static func make_reflection_label(label: Label, alpha := 0.22) -> Label:
+	label.modulate = Color(1, 1, 1, alpha)
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	label.resized.connect(func() -> void: label.pivot_offset = label.size / 2.0)
+	label.scale = Vector2(1, -1)
+	return label
+
+
 static func make_label(text: String, font_size := 16, color := COLOR_TEXT) -> Label:
 	var label := Label.new()
 	label.text = text

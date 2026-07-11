@@ -14,6 +14,15 @@ class_name FootstepEmitter
 ## core gameplay signal in a hide-and-seek game — a Hunter can track a
 ## Hider (or be fooled by an echo) by ear.
 
+## Fired every time a step actually plays, with the exact ground
+## position (this node's parent's position at that instant) it happened
+## at. Nothing before this pass consumed it — it exists so EchoGhost can
+## spawn a footstep ripple in lockstep with the sound, without EchoGhost
+## needing to reimplement (or duplicate) this class's stride/cadence
+## logic. Purely additive: emitting it changes nothing about when or how
+## often a step plays.
+signal stepped(ground_position: Vector3)
+
 ## Meters of horizontal travel per step. Cadence scales with speed
 ## automatically since this is distance-based, not time-based.
 @export var stride := 1.9
@@ -63,3 +72,4 @@ func _process(delta: float) -> void:
 		_distance_accum = fmod(_distance_accum, stride)
 		pitch_scale = randf_range(0.92, 1.08) # repeats don't sound mechanical
 		play()
+		stepped.emit(pos)

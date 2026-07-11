@@ -37,6 +37,18 @@ func setup(model_root: Node3D) -> void:
 
 	play("idle")
 
+## Facing/lean only: used when a CharacterRig owns clip playback (skinned
+## players) but the body still wants this component's face_direction
+## smoothing. Deliberately does NOT search for an AnimationPlayer or merge
+## the sample GLB clips — the skin's own AnimationPlayer belongs to the
+## rig, and merging foreign-skeleton clips into it would only pollute its
+## library. Also clears any previously-adopted player so play() can never
+## touch a freed node after the stock model was swapped out mid-session.
+func setup_facing_only(model_root: Node3D) -> void:
+	_model_root = model_root
+	_anim_player = null
+	_current = ""
+
 @export var lean_amount: float = 0.15
 
 func face_direction(dir: Vector3, delta: float) -> void:

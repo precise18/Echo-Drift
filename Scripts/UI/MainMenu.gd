@@ -94,9 +94,23 @@ func _build_title_screen() -> Control:
 	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
 	root.add_child(vbox)
 
-	vbox.add_child(UIKit.make_title("ECHO HUNT", 58))
+	vbox.add_child(UIKit.make_reflected_title("ECHO HUNT", 58))
 	vbox.add_child(UIKit.make_paragraph("Every move you make becomes a living echo.\nHunt by sound and ghost trails — or use your own past to deceive.", 15))
 	vbox.add_child(_spacer(18))
+
+	vbox.add_child(UIKit.make_title("Display Name", 14, UIKit.COLOR_MUTED))
+	var name_field := LineEdit.new()
+	name_field.text = GameSettings.display_name
+	name_field.placeholder_text = "Leave blank for \"Player 1\" / \"Player 2\""
+	name_field.alignment = HORIZONTAL_ALIGNMENT_CENTER
+	name_field.custom_minimum_size = Vector2(280, 40)
+	# The server applies the same 20-char cap again on registration
+	# (NetworkManager._apply_display_name) — this just stops the field
+	# from accepting more than it in the first place.
+	name_field.max_length = 20
+	name_field.text_changed.connect(func(new_text: String) -> void: GameSettings.set_display_name(new_text))
+	vbox.add_child(name_field)
+	vbox.add_child(_spacer(10))
 
 	var buttons := {
 		"Quick Play (Public)": func() -> void: _on_quick_play_pressed(),
@@ -131,6 +145,28 @@ func _build_title_screen() -> Control:
 		btn.pressed.connect(func(): GameSettings.set_preferred_role(i))
 		role_hbox.add_child(btn)
 	vbox.add_child(role_hbox)
+
+	# Character skin picker — driven entirely by which skin models this
+	# build actually ships (SkinRegistry.available_ids), same registry
+	# pattern as the map list on the Host screen: teammates dropping a
+	# new .fbx into Assets/Characters/Skins/ makes it appear here with
+	# zero menu changes. Hidden outright if the build has no skins.
+	var skin_ids: Array = SkinRegistry.available_ids()
+	if not skin_ids.is_empty():
+		vbox.add_child(_spacer(10))
+		vbox.add_child(UIKit.make_title("Character", 14, UIKit.COLOR_MUTED))
+		var skin_group := ButtonGroup.new()
+		var skin_hbox := HBoxContainer.new()
+		skin_hbox.alignment = BoxContainer.ALIGNMENT_CENTER
+		skin_hbox.add_theme_constant_override("separation", 10)
+		for skin_id: String in skin_ids:
+			var skin_btn := UIKit.make_button(SkinRegistry.get_skin_name(skin_id), 120.0)
+			skin_btn.toggle_mode = true
+			skin_btn.button_group = skin_group
+			skin_btn.button_pressed = SkinRegistry.valid_id(GameSettings.skin_id) == skin_id
+			skin_btn.pressed.connect(func() -> void: GameSettings.set_skin_id(skin_id))
+			skin_hbox.add_child(skin_btn)
+		vbox.add_child(skin_hbox)
 
 	vbox.add_child(_spacer(10))
 	_notice_label = UIKit.make_title("", 15, UIKit.COLOR_GOLD)

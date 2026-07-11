@@ -248,8 +248,8 @@ func reassign_role(new_peer_id: int, role: int) -> void:
 		hider_id = new_peer_id
 	else:
 		hunter_id = new_peer_id
-	PacketTrace.sent("resync_after_reconnect", multiplayer.get_unique_id(), "ALL (broadcast + call_local)", "hider_id=%d hunter_id=%d active=%s time=%s" % [hider_id, hunter_id, round_active, time_left], "_resync_after_reconnect") # TEMP DEBUG
-	_resync_after_reconnect.rpc(hider_id, hunter_id, round_active, time_left)
+	PacketTrace.sent("resync_after_reconnect", multiplayer.get_unique_id(), "ALL (broadcast + call_local)", "hider_id=%d hunter_id=%d active=%s time=%s hunter_score=%d hider_score=%d" % [hider_id, hunter_id, round_active, time_left, MatchStateManager.hunter_score, MatchStateManager.hider_score], "_resync_after_reconnect") # TEMP DEBUG
+	_resync_after_reconnect.rpc(hider_id, hunter_id, round_active, time_left, MatchStateManager.hunter_score, MatchStateManager.hider_score)
 
 
 ## Broadcasts whatever the *current* authoritative state actually is
@@ -257,12 +257,13 @@ func reassign_role(new_peer_id: int, role: int) -> void:
 ## timeout while the peer was disconnected, in which case this correctly
 ## leaves it inactive rather than forcing a round back open).
 @rpc("authority", "call_local", "reliable")
-func _resync_after_reconnect(synced_hider_id: int, synced_hunter_id: int, active: bool, remaining_time: float) -> void:
-	PacketTrace.received("resync_after_reconnect", multiplayer.get_remote_sender_id(), multiplayer.get_unique_id(), "hider_id=%d hunter_id=%d active=%s time=%s" % [synced_hider_id, synced_hunter_id, active, remaining_time], "_resync_after_reconnect", "_resync_after_reconnect (handled, no guard)") # TEMP DEBUG
+func _resync_after_reconnect(synced_hider_id: int, synced_hunter_id: int, active: bool, remaining_time: float, synced_hunter_score: int, synced_hider_score: int) -> void:
+	PacketTrace.received("resync_after_reconnect", multiplayer.get_remote_sender_id(), multiplayer.get_unique_id(), "hider_id=%d hunter_id=%d active=%s time=%s hunter_score=%d hider_score=%d" % [synced_hider_id, synced_hunter_id, active, remaining_time, synced_hunter_score, synced_hider_score], "_resync_after_reconnect", "_resync_after_reconnect (handled, no guard)") # TEMP DEBUG
 	hider_id = synced_hider_id
 	hunter_id = synced_hunter_id
 	round_active = active
 	time_left = remaining_time
+	MatchStateManager.sync_scores(synced_hunter_score, synced_hider_score)
 	if active:
 		_timer.start(remaining_time)
 		role_assigned.emit(hider_id, Role.HIDER)
@@ -270,6 +271,28 @@ func _resync_after_reconnect(synced_hider_id: int, synced_hunter_id: int, active
 		round_started.emit()
 	else:
 		_timer.stop()
+
+
+## Server-only. Called by Main.gd when a reconnect grace window expires
+## without the departed peer returning. A plain local reset_state() call
+## here would only clear the SERVER's own copy — the surviving peer's
+## RoundManager/MatchStateManager never receives any signal telling it
+## the round is over, so it stays stuck showing a live round (timer,
+## role chip, hider/hunter ids) for a match the server has already
+## abandoned, with no further RPC ever correcting it. Broadcasting keeps
+## every connected peer's state consistent with the server's, the same
+## way every other round-state change in this file already does.
+func broadcast_reset_state() -> void:
+	if not multiplayer.is_server():
+		return
+	PacketTrace.sent("reset_state", multiplayer.get_unique_id(), "ALL (broadcast + call_local)", "N/A", "_reset_state") # TEMP DEBUG
+	_reset_state.rpc()
+
+
+@rpc("authority", "call_local", "reliable")
+func _reset_state() -> void:
+	PacketTrace.received("reset_state", multiplayer.get_remote_sender_id(), multiplayer.get_unique_id(), "N/A", "_reset_state", "_reset_state (handled, no guard)") # TEMP DEBUG
+	reset_state()
 
 
 ## Clears all round state. Called whenever the multiplayer session ends

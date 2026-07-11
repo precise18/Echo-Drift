@@ -41,7 +41,7 @@ console output and debug asserts in a build.
 | **Linux x86_64** | ✅ Shipped | Boot-verified headless (`--quit-after`, exit 0, clean log) |
 | **Windows x86_64** | ✅ Shipped | Exported and structurally verified (valid PE32+). Run-verified only via the identical Linux pack — do one real Windows smoke test before the jam page goes public |
 | **macOS** | ❌ Not shipped | Needs Apple signing/notarization not available here. No platform-specific code exists; a Mac owner can add the preset and export from the editor |
-| **Web (HTML5)** | ❌ Deliberately skipped | Browsers cannot open UDP sockets; ENet-based multiplayer cannot work in a web build. Shipping a single-player shell would misrepresent the game |
+| **Web (HTML5)** | ❌ Deliberately skipped | The multiplayer transport is the `webrtc_native` GDExtension (desktop/mobile binaries only — see addons/webrtc_native/); a web build would need a different WebRTC path plus a re-test of the whole networking layer. Shipping a single-player shell would misrepresent the game |
 | **Android/iOS** | ❌ Out of scope | No touch controls; desktop keyboard/mouse game |
 
 ## Export templates

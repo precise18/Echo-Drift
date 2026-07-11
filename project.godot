@@ -16,7 +16,7 @@ compatibility/default_parent_skeleton_in_mesh_instance_3d=true
 
 config/name="Echo Hunt"
 config/description="3D multiplayer hide-and-seek built around an echo/reflection mechanic — your past movements become living echoes."
-config/version="1.0.1"
+config/version="1.1.0"
 run/main_scene="res://Scenes/UI/MainMenu.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 config/icon="res://icon.svg"
@@ -97,5 +97,4 @@ common/physics_interpolation=true
 
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
-anti_aliasing/quality/msaa_3d=0
 environment/defaults/default_clear_color=Color(0.55, 0.75, 0.95, 1)

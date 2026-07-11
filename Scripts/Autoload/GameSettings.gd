@@ -26,6 +26,18 @@ var mouse_sensitivity := 1.0 # multiplier on PlayerController's base sensitivity
 var fullscreen := false
 var last_join_code := ""
 var preferred_role := 0 # 0: Any, 1: Hider, 2: Hunter
+## Empty means "no preference" — NetworkManager assigns a deterministic
+## "Player 1" / "Player 2" fallback in that case (see PLAYER_NAME_SYSTEM.md).
+## Deliberately not trimmed here: trimming on every keystroke would eat a
+## trailing space the moment it's typed, making a multi-word name
+## impossible to enter. The meaningful trim (deciding whether the name is
+## "blank") happens once, server-side, in NetworkManager._apply_display_name.
+var display_name := ""
+## The chosen character skin (a SkinRegistry id). Validated server-side
+## against the skins actually present in the build (SkinRegistry.valid_id)
+## on registration, same as display_name — a stale saved id from a build
+## that shipped more skins can never break a peer.
+var skin_id := SkinRegistry.DEFAULT_SKIN_ID
 
 
 func _ready() -> void:
@@ -58,6 +70,14 @@ func set_preferred_role(role: int) -> void:
 	preferred_role = role
 	save()
 
+func set_display_name(value: String) -> void:
+	display_name = value
+	save()
+
+func set_skin_id(value: String) -> void:
+	skin_id = value
+	save()
+
 
 func save() -> void:
 	var config := ConfigFile.new()
@@ -67,6 +87,8 @@ func save() -> void:
 	config.set_value("display", "fullscreen", fullscreen)
 	config.set_value("network", "last_join_code", last_join_code)
 	config.set_value("game", "preferred_role", preferred_role)
+	config.set_value("game", "display_name", display_name)
+	config.set_value("game", "skin_id", skin_id)
 	config.save(SAVE_PATH)
 
 
@@ -80,6 +102,8 @@ func _load() -> void:
 	fullscreen = config.get_value("display", "fullscreen", false)
 	last_join_code = config.get_value("network", "last_join_code", "")
 	preferred_role = config.get_value("game", "preferred_role", 0)
+	display_name = config.get_value("game", "display_name", "")
+	skin_id = config.get_value("game", "skin_id", SkinRegistry.DEFAULT_SKIN_ID)
 
 
 func _apply_all() -> void:

@@ -5,6 +5,47 @@ All notable changes to Echo Hunt. Versions follow
 sequential feature passes, each verified with headless two-peer
 regression tests before merging.
 
+## [1.1.0] — 2026-07-11
+
+Release Candidate: teammate feature integration + a full stabilization,
+theming, and QA campaign (see FINAL_RELEASE_REPORT.md for the complete
+account and FINAL_QA_REPORT.md for the issue-by-issue audit trail).
+
+### Integrated (teammate systems)
+- **Character skins** (`SkinRegistry`/`CharacterRig`): pick a character
+  on the title screen; the choice replicates with the same
+  server-validated registry sync as display names and replaces the
+  stock capsule on every peer's screen. The registry is
+  availability-filtered — only skins whose model file actually ships
+  are offered/replicated, so the remaining five roster entries go live
+  by simply dropping their `.fbx` into `Assets/Characters/Skins/`.
+  Skins are identity, not role: the hider/hunter tint stays on the HUD,
+  never painted over the skin.
+- **Forest Arena map**: the second map, registered in `MapManager` and
+  selectable when hosting. Its four missing materials (the reason it
+  was previously orphaned) were created.
+- **Echo minimap**: the bottom-left radar showing the visible echo's
+  real relative direction/distance, promoted from preview to shipped.
+
+### Added
+- Player display names: entered on the title screen, synced via RPC,
+  shown as billboarded 3D name tags (own tag hidden locally).
+- Full echo VFX suite: distortion/dissolve shader, spawn pulse,
+  dissolve effect, footstep ground ripples, replay-timeline label and
+  ring, hum vibrato, UI click echo, title/game-over reflection titles.
+
+### Fixed
+- Reconnect race that could permanently strand a peer with no
+  controllable body (the "only one player can move" family).
+- Reconnect-grace-expiry state reset now broadcast to all peers.
+- Reconnecting peer's scoreboard no longer stuck at 0–0.
+- Dead `move_backward` input action (S key never worked).
+- Echo ghost now finds the player's real AnimationPlayer (recursive
+  search), and resolves recorded clip names by substring so skinned
+  players' echoes still animate.
+- Mouse sensitivity setting is now actually applied to the camera.
+- Removed leftover debug script `check_webrtc.gd` from the pack.
+
 ## [1.0.1] — 2026-07-11
 
 First-playtest fixes — two bugs found the moment real humans entered

@@ -18,6 +18,11 @@ const MAPS := {
 		"scene": "res://Scenes/Maps/EchoChamber.tscn",
 		"description": "A perfectly mirrored arena split by a glowing pool. Every pillar, light and teleport pad has a twin across the mirror line — hunter and hider start as reflections of each other.",
 	},
+	"arena": {
+		"name": "Forest Arena",
+		"scene": "res://Scenes/Maps/Arena.tscn",
+		"description": "A walled woodland clearing — trees, rocks and a lone cabin to hide behind. Denser cover than the Echo Chamber, but no teleport pads to escape through.",
+	},
 }
 const DEFAULT_MAP_ID := "echo_chamber"
 

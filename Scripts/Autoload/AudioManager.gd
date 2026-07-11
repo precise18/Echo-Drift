@@ -24,9 +24,16 @@ const BUSES := {
 ## you won/lost".
 const VERDICT_DELAY := 0.8
 
+## Every UI click gets a faint, quieter repeat of itself shortly after —
+## a literal audio echo, reinforcing the game's own theme on every single
+## menu interaction rather than only in-world. See THEME_POLISH_REPORT.md.
+const CLICK_ECHO_DELAY := 0.09
+const CLICK_ECHO_VOLUME_DB := -14.0
+
 var _music_player: AudioStreamPlayer
 var _wind_player: AudioStreamPlayer
 var _click_player: AudioStreamPlayer
+var _click_echo_player: AudioStreamPlayer
 var _hover_player: AudioStreamPlayer
 var _sting_player: AudioStreamPlayer
 var _verdict_player: AudioStreamPlayer
@@ -45,6 +52,8 @@ func _ready() -> void:
 	# a loaded machine — see OPTIMIZATION_REPORT.md). SoundFactory's
 	# cache is mutex-guarded for exactly this.
 	_click_player = _make_player(SoundFactory.ui_click(), &"UI")
+	_click_echo_player = _make_player(SoundFactory.ui_click(), &"UI")
+	_click_echo_player.volume_db = CLICK_ECHO_VOLUME_DB
 	_hover_player = _make_player(SoundFactory.ui_hover(), &"UI")
 	_music_player = _make_player(null, &"Music")
 	_wind_player = _make_player(null, &"Ambience")
@@ -94,6 +103,7 @@ func _exit_tree() -> void:
 
 func play_click() -> void:
 	_click_player.play()
+	get_tree().create_timer(CLICK_ECHO_DELAY).timeout.connect(_click_echo_player.play)
 
 
 func play_hover() -> void:

@@ -1,7 +1,7 @@
 [gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://Scripts/Echo/EchoGhost.gd" id="1_ghost"]
-[ext_resource type="Material" path="res://Materials/ghost_material.tres" id="2_mat"]
+[ext_resource type="Material" path="res://Materials/echo_ghost_material.tres" id="2_mat"]
 [ext_resource type="AnimationLibrary" path="res://Assets/Characters/MovementAnimations.tres" id="3_anims"]
 [ext_resource type="Script" path="res://Scripts/Echo/EchoAudio.gd" id="4_audio"]
 

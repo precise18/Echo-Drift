@@ -15,8 +15,16 @@ const SAMPLE_RATE := 22050.0
 const FREQUENCY := 220.0 # a low, unobtrusive hum (A3)
 const AMPLITUDE := 0.15
 
+## A slow, gentle frequency wobble — the difference between "a machine
+## hum" and "something not quite steady, not quite real". Cheap: one more
+## sine evaluated per sample, reusing work this generator already does
+## every frame regardless.
+const VIBRATO_RATE := 0.35 # Hz
+const VIBRATO_DEPTH := 3.0 # +/- Hz frequency deviation
+
 var _playback: AudioStreamGeneratorPlayback
 var _phase := 0.0
+var _vibrato_phase := 0.0
 
 
 func _ready() -> void:
@@ -45,6 +53,8 @@ func _process(_delta: float) -> void:
 
 	var frames_available := _playback.get_frames_available()
 	for _i in range(frames_available):
+		_vibrato_phase = fmod(_vibrato_phase + TAU * VIBRATO_RATE / SAMPLE_RATE, TAU)
+		var wobbled_freq := FREQUENCY + sin(_vibrato_phase) * VIBRATO_DEPTH
 		var sample := sin(_phase) * AMPLITUDE
 		_playback.push_frame(Vector2(sample, sample))
-		_phase = fmod(_phase + TAU * FREQUENCY / SAMPLE_RATE, TAU)
+		_phase = fmod(_phase + TAU * wobbled_freq / SAMPLE_RATE, TAU)

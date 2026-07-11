@@ -70,6 +70,18 @@ func is_in_lobby() -> bool:
 	return phase == MatchPhase.LOBBY
 
 
+## Applies scores handed down by RoundManager's reconnect-resync RPC. A
+## reconnecting peer's own MatchStateManager otherwise has no way to learn
+## the current score at all — ordinary score updates only ever travel via
+## _end_round's call_local RPC, which a peer that wasn't connected yet
+## when earlier rounds ended never received, leaving its scoreboard stuck
+## at 0-0 until the next round happens to end.
+func sync_scores(new_hunter_score: int, new_hider_score: int) -> void:
+	hunter_score = new_hunter_score
+	hider_score = new_hider_score
+	score_changed.emit(hunter_score, hider_score)
+
+
 ## Clears score and returns to the lobby phase. Called whenever the
 ## multiplayer session itself ends (see RoundManager.reset_state()) and
 ## on rematch, since both should start from a fresh 0–0.

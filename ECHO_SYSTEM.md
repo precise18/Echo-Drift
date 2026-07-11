@@ -49,8 +49,11 @@ assigned) and `EchoSystem.clear()` (when a round ends) — it has no idea
 ### Recording
 
 `EchoRecorder` samples its `target`'s `global_transform` and current
-animation name (read from a sibling node named `AnimPlayer`, matching
-`Player.tscn`'s convention) every `sample_interval` seconds, appending
+animation name (read via a recursive search for the target's
+`AnimationPlayer` — it can be nested at any depth inside an imported
+model, e.g. `Player.tscn`'s `Model/ModelInstance/...`, the same lookup
+`AnimationComponent` already does for the live player) every
+`sample_interval` seconds, appending
 `{t, xform, anim}` to an array and trimming anything older than
 `buffer_seconds`. Both are `@export` vars — see "Configurable recording
 duration" and "Configurable replay interval" below.
@@ -78,13 +81,16 @@ garbage.
 
 ### Ghost material & collision
 
-`EchoGhost.tscn`'s mesh uses `Materials/ghost_material.tres`
-(`transparency = 1`, unshaded, emissive) so it always reads as "not a
-real player" at a glance, and there is **no `CollisionShape3D`
+`EchoGhost.tscn`'s mesh uses `Materials/echo_ghost_material.tres` (a
+lightweight custom shader — transparent, unshaded, emissive, with a
+per-vertex waver and a pulsing/dissolving alpha) so it always reads as
+"not a real player" at a glance, and there is **no `CollisionShape3D`
 anywhere in the scene** — the ghost cannot block movement, cannot be
 walked into meaningfully, and never participates in physics queries.
 Capture detection (`WinConditions.is_capture`) only ever compares real
-player positions, never a ghost's.
+player positions, never a ghost's. See
+[`ECHO_VISUAL_GUIDE.md`](ECHO_VISUAL_GUIDE.md) for the full breakdown
+of every visual/audio effect a ghost carries and why each one exists.
 
 ### Positional audio
 

@@ -35,12 +35,26 @@ var _target_anim_player: AnimationPlayer = null
 ## different players' movement.
 func set_target(new_target: Node3D) -> void:
 	target = new_target
-	# Assumes the target has a direct child named "AnimPlayer" (matches
-	# Player.tscn's convention) — null for targets without one, so
-	# EchoRecorder stays usable on any Node3D.
-	_target_anim_player = target.get_node_or_null("AnimPlayer") as AnimationPlayer if target != null else null
+	_target_anim_player = _find_anim_player(target) if target != null else null
 	_samples.clear()
 	_time_since_last_sample = 0.0
+
+
+## Player.tscn's AnimationPlayer lives inside its imported model
+## (Model/ModelInstance/... at whatever depth the import produced), not
+## as a direct child literally named "AnimPlayer" — mirrors
+## AnimationComponent's own lookup (Scripts/Player/components/
+## animation_component.gd) so recording actually finds the same node
+## driving the player's real animation state instead of silently finding
+## nothing and recording an empty anim name for every sample.
+func _find_anim_player(node: Node) -> AnimationPlayer:
+	if node is AnimationPlayer:
+		return node as AnimationPlayer
+	for child: Node in node.get_children():
+		var result := _find_anim_player(child)
+		if result:
+			return result
+	return null
 
 
 func clear() -> void:

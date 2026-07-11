@@ -38,6 +38,7 @@ var _round_end_started_at := 0.0
 # Game over.
 var _game_over_panel: Control
 var _game_over_headline: Label
+var _game_over_headline_reflection: Label
 var _game_over_detail: Label
 
 # Pause.
@@ -48,6 +49,9 @@ var _paused := false
 
 var _connection_status_label: Label
 var _grace_deadline := -1.0
+
+# Bottom-left echo-direction radar — see EchoMinimap.gd.
+var _echo_minimap: EchoMinimap
 
 # Per-frame _process work only rebuilds label strings when the displayed
 # value actually changed — Label.text assignment isn't free (layout), and
@@ -72,6 +76,7 @@ func _ready() -> void:
 	_build_game_over_panel()
 	_build_pause_panel()
 	_build_connection_status()
+	_build_echo_minimap()
 
 	RoundManager.round_started.connect(_on_round_started)
 	RoundManager.round_ended.connect(_on_round_ended)
@@ -252,6 +257,13 @@ func _build_game_over_panel() -> void:
 	content.add_child(UIKit.make_title("MATCH OVER", 18, UIKit.COLOR_MUTED))
 	_game_over_headline = UIKit.make_title("", 46)
 	content.add_child(_game_over_headline)
+	# A faint mirrored echo of VICTORY/DEFEAT — same "reflection" language
+	# as the title screen (UIKit.make_reflected_title), applied here as
+	# two separately-tracked labels instead of that all-in-one helper
+	# because this headline's text/color change at runtime (see
+	# _show_game_over below), not just once at construction.
+	_game_over_headline_reflection = UIKit.make_reflection_label(UIKit.make_title("", 46))
+	content.add_child(_game_over_headline_reflection)
 	_game_over_detail = UIKit.make_title("", 17)
 	content.add_child(_game_over_detail)
 
@@ -323,6 +335,20 @@ func _build_connection_status() -> void:
 	_root.add_child(_connection_status_label)
 
 
+## Bottom-left echo radar — see EchoMinimap.gd. Sized from the widget's
+## own RADIUS constant so this stays correct if that changes.
+func _build_echo_minimap() -> void:
+	_echo_minimap = EchoMinimap.new()
+	_echo_minimap.main_root = get_parent()
+	var diameter := EchoMinimap.RADIUS * 2.0
+	_echo_minimap.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	_echo_minimap.offset_left = 24
+	_echo_minimap.offset_right = 24 + diameter
+	_echo_minimap.offset_top = -(24 + diameter)
+	_echo_minimap.offset_bottom = -24
+	_root.add_child(_echo_minimap)
+
+
 # ---------------------------------------------------------------------------
 # State changes
 # ---------------------------------------------------------------------------
@@ -357,8 +383,13 @@ func _on_round_ended(winner_role: int) -> void:
 func _show_game_over(winner_role: int, local_won: bool) -> void:
 	_round_end_panel.visible = false
 	_game_over_headline.text = "VICTORY" if local_won else "DEFEAT"
-	_game_over_headline.add_theme_color_override("font_color",
-		UIKit.COLOR_GOLD if local_won else UIKit.COLOR_MUTED)
+	var headline_color := UIKit.COLOR_GOLD if local_won else UIKit.COLOR_MUTED
+	_game_over_headline.add_theme_color_override("font_color", headline_color)
+	# Keep the mirrored echo beneath it in lockstep — see
+	# _build_game_over_panel()'s doc comment for why this is two labels
+	# kept in sync by hand rather than one reusable widget.
+	_game_over_headline_reflection.text = _game_over_headline.text
+	_game_over_headline_reflection.add_theme_color_override("font_color", headline_color)
 	var winner_name := "The Hunter" if winner_role == Role.HUNTER else "The Hider"
 	_game_over_detail.text = "%s takes the match\nFinal score: Hunter %d — %d Hider" % [
 		winner_name, MatchStateManager.hunter_score, MatchStateManager.hider_score]

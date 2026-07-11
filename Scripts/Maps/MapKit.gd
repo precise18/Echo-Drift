@@ -248,6 +248,44 @@ static func make_trail_particles(color: Color, amount: int, node_name := "Trail"
 	return particles
 
 
+## A flat, one-shot radial burst hugging the ground — a footstep ripple.
+## Same cheap dot-mesh idiom as every other particle effect in this file
+## (no new draw mesh, no shader), just a different `ParticleProcessMaterial`
+## shape: `flatness = 1.0` collapses the emission cone onto the XZ plane,
+## so particles fly outward *along the ground* instead of into the air,
+## which is what reads as a ripple rather than a burst/spark. Caller
+## positions this at the exact ground point of a footstep and calls
+## `.restart()`; frees itself once the (very short) burst finishes.
+static func make_ripple_particles(color: Color, amount: int, node_name := "Ripple") -> GPUParticles3D:
+	var particles := GPUParticles3D.new()
+	particles.name = node_name
+	particles.amount = amount
+	particles.lifetime = 0.4
+	particles.one_shot = true
+	particles.explosiveness = 1.0
+	particles.emitting = false
+	particles.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+
+	var process_material := ParticleProcessMaterial.new()
+	process_material.direction = Vector3(0, 1, 0)
+	process_material.spread = 180.0
+	process_material.flatness = 1.0 # collapse the emission cone onto the ground plane
+	process_material.gravity = Vector3.ZERO
+	process_material.initial_velocity_min = 0.8
+	process_material.initial_velocity_max = 1.6
+	process_material.damping_min = 3.0 # skids to a stop instead of drifting off
+	process_material.damping_max = 4.5
+	process_material.scale_min = 0.35
+	process_material.scale_max = 0.6
+	process_material.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_SPHERE
+	process_material.emission_sphere_radius = 0.06
+	particles.process_material = process_material
+
+	particles.draw_pass_1 = _get_particle_dot_mesh(color, 0.035)
+	particles.finished.connect(particles.queue_free)
+	return particles
+
+
 ## Bakes a walkable NavigationMesh from every MapKit-built piece in the
 ## map, wherever it sits in the tree — every StaticBody3D this file
 ## creates is auto-tagged into NAV_SOURCE_GROUP, and baking parses by

@@ -74,6 +74,19 @@ func _on_peer_connected_server(id: int) -> void:
 func _on_peer_disconnected_server(id: int, session_id: String) -> void:
 	var node := players_container.get_node_or_null(str(id))
 	if node != null:
+		# remove_child() is synchronous; queue_free() alone is not — it only
+		# marks the node for deletion at end-of-frame, so it stays a child
+		# (and keeps its name) until then. This project's WebRTC transport
+		# hardcodes peer ids (host=1, client=2 — see WebRTCSignaler.
+		# _setup_webrtc), so a reconnecting client is guaranteed to come
+		# back as the SAME peer id, not a fresh one the way ENet would
+		# assign. A fast reconnect landing before the deferred free would
+		# find _spawn_player()'s has_node() check still true, silently skip
+		# spawning a new body at all, and leave that peer with no player
+		# node — and therefore no multiplayer authority ever assigned to
+		# them, i.e. permanently unresponsive controls. Removing the child
+		# immediately closes that window.
+		players_container.remove_child(node)
 		node.queue_free()
 
 	if RoundManager.round_active and session_id != "":
@@ -94,11 +107,12 @@ func _on_player_reconnected_server(peer_id: int, role: int) -> void:
 ## same as the old immediate-reset behavior.
 func _on_reconnect_grace_ended_server(_role: int, reconnected: bool) -> void:
 	if not reconnected:
-		RoundManager.reset_state()
+		RoundManager.broadcast_reset_state()
 
 
 func _spawn_player(peer_id: int) -> void:
 	if players_container.has_node(str(peer_id)):
+		push_warning("Main: _spawn_player(%d) skipped — a node named '%d' already exists under Players/. If this follows a disconnect, the previous body may not have been removed in time (see _on_peer_disconnected_server), leaving this peer without a body and unable to move." % [peer_id, peer_id])
 		return
 	var player := PLAYER_SCENE.instantiate()
 	player.name = str(peer_id)
@@ -137,6 +151,14 @@ func _on_node_spawned(node: Node) -> void:
 		node.set_multiplayer_authority(node_name.to_int())
 		if node.has_method("apply_authority_state"):
 			node.apply_authority_state()
+	else:
+		# Godot auto-suffixes a node's name on a collision with an existing
+		# sibling (e.g. a not-yet-freed old body still occupying that name
+		# slot — see _on_peer_disconnected_server). If that ever happens,
+		# this node's authority silently stays at the default (the server),
+		# so its owning peer can never move it — with previously zero trace
+		# of why. Surfaced here instead of failing silently.
+		push_warning("Main: spawned node name '%s' is not a valid peer id — authority left unassigned. That player's controls will not respond." % node_name)
 
 
 func _on_role_assigned(peer_id: int, role: int) -> void:

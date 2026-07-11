@@ -65,9 +65,14 @@ func get_right() -> Vector3:
 
 func handle_mouse(event: InputEventMouseMotion) -> void:
 	_free_look_timer = free_look_delay
-	rotate_y(-event.relative.x * sensitivity)
+	# GameSettings.mouse_sensitivity is a user-facing multiplier (Settings
+	# panel slider, persisted to user://settings.cfg) — this was the only
+	# missing link between that slider and actual camera movement; see
+	# FINAL_QA_REPORT.md.
+	var s := sensitivity * GameSettings.mouse_sensitivity
+	rotate_y(-event.relative.x * s)
 	_pitch.rotation.x = clampf(
-		_pitch.rotation.x - event.relative.y * sensitivity,
+		_pitch.rotation.x - event.relative.y * s,
 		-PI / 2.5, PI / 6.0
 	)
 
