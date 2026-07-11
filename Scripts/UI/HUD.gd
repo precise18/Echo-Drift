@@ -351,7 +351,7 @@ func _build_minimap() -> void:
 
 func _build_echo_indicator() -> void:
 	_echo_indicator = VBoxContainer.new()
-	_echo_indicator.set_anchors_preset(Control.PRESET_BOTTOM_CENTER)
+	_echo_indicator.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
 	_echo_indicator.offset_left  = -110
 	_echo_indicator.offset_right =  110
 	_echo_indicator.offset_top   = -72
