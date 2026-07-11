@@ -142,8 +142,16 @@ func _build_title_screen() -> Control:
 	)
 	http.request(get_node("/root/WebRTCSignaler").server_url.replace("wss://", "https://").replace("ws://", "http://") + "/api/stats")
 
+	var sig = get_node("/root/WebRTCSignaler")
+	if not sig.room_error.is_connected(_on_room_error):
+		sig.room_error.connect(_on_room_error)
+
 	vbox.add_child(UIKit.make_title("Global Multiplayer  •  built with Godot", 12, UIKit.COLOR_MUTED))
 	return root
+
+func _on_room_error(msg: String) -> void:
+	_notice_label.text = "Error: " + msg
+	_show_screen("title")
 
 
 func _build_host_screen() -> Control:
