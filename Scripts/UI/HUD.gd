@@ -77,6 +77,7 @@ func _ready() -> void:
 	MatchStateManager.phase_changed.connect(_on_phase_changed)
 	NetworkManager.reconnect_grace_started.connect(_on_reconnect_grace_started)
 	NetworkManager.reconnect_grace_ended.connect(_on_reconnect_grace_ended)
+	WebRTCSignaler.room_created.connect(_on_room_created)
 
 	_apply_phase(MatchStateManager.phase)
 	_update_mouse()
@@ -380,6 +381,10 @@ func _refresh_lobby() -> void:
 		_lobby_start_button.visible = false
 		_lobby_waiting_label.text = "Waiting for the host to start the match..."
 
+func _on_room_created(_code: String) -> void:
+	_last_lobby_player_count = -1
+	if _lobby_panel.visible:
+		_refresh_lobby()
 
 func _show_round_banner() -> void:
 	_banner_round.text = "ROUND %d" % MatchStateManager.round_number()
