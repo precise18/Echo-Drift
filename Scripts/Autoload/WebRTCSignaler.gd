@@ -103,6 +103,8 @@ func stop():
 	if webrtc_conn != null:
 		webrtc_conn.close()
 		webrtc_conn = null
+	multiplayer.multiplayer_peer = null
+	current_room_code = ""
 
 func _handle_message(msg: Dictionary):
 	if msg.type == "room_created":
@@ -126,9 +128,10 @@ func _handle_message(msg: Dictionary):
 
 func _setup_webrtc():
 	webrtc_conn = WebRTCPeerConnection.new()
-	webrtc_conn.initialize({
+	var init_err = webrtc_conn.initialize({
 		"iceServers": [ { "urls": ["stun:stun.l.google.com:19302"] } ]
 	})
+	if init_err != OK: push_error("WebRTC initialize failed: ", init_err)
 	
 	webrtc_conn.session_description_created.connect(_on_sdo_created)
 	webrtc_conn.ice_candidate_created.connect(_on_ice_candidate)
@@ -136,13 +139,16 @@ func _setup_webrtc():
 	if is_host:
 		# If we are host of a private game, create_server is already called in start_host
 		# If we are host of a public game, create_server is already called in room_created
-		webrtc_mp.add_peer(webrtc_conn, 2) # Client is peer 2
+		var err = webrtc_mp.add_peer(webrtc_conn, 2) # Client is peer 2
+		if err != OK: push_error("Host add_peer failed: ", err)
 		webrtc_conn.create_offer()
 	else:
 		webrtc_mp.create_client(2)
-		webrtc_mp.add_peer(webrtc_conn, 1) # Server is peer 1
+		var err = webrtc_mp.add_peer(webrtc_conn, 1) # Server is peer 1
+		if err != OK: push_error("Client add_peer failed: ", err)
 		
-	multiplayer.multiplayer_peer = webrtc_mp
+	if multiplayer.multiplayer_peer != webrtc_mp:
+		multiplayer.multiplayer_peer = webrtc_mp
 	match_ready.emit()
 
 func _on_sdo_created(type: String, sdp: String):
