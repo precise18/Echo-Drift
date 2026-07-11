@@ -127,7 +127,10 @@ func _handle_message(msg: Dictionary):
 func _setup_webrtc():
 	webrtc_conn = WebRTCPeerConnection.new()
 	webrtc_conn.initialize({
-		"iceServers": [ { "urls": ["stun:stun.l.google.com:19302"] } ]
+		"iceServers": [
+			{ "urls": ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"] },
+			{ "urls": ["turn:openrelay.metered.ca:80", "turn:openrelay.metered.ca:443", "turn:openrelay.metered.ca:443?transport=tcp"], "username": "openrelayproject", "credential": "openrelayproject" }
+		]
 	})
 	
 	webrtc_conn.session_description_created.connect(_on_sdo_created)

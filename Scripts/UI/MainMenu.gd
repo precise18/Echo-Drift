@@ -142,7 +142,7 @@ func _build_title_screen() -> Control:
 	)
 	http.request(get_node("/root/WebRTCSignaler").server_url.replace("wss://", "https://").replace("ws://", "http://") + "/api/stats")
 
-	vbox.add_child(UIKit.make_title("2-player LAN  •  built with Godot", 12, UIKit.COLOR_MUTED))
+	vbox.add_child(UIKit.make_title("Global Multiplayer  •  built with Godot", 12, UIKit.COLOR_MUTED))
 	return root
 
 
@@ -187,7 +187,7 @@ func _build_join_screen() -> Control:
 	content.add_child(UIKit.make_title("Enter the Room Code", 15, UIKit.COLOR_MUTED))
 
 	_ip_field = LineEdit.new()
-	_ip_field.text = GameSettings.last_join_ip
+	_ip_field.text = GameSettings.last_join_code
 	_ip_field.placeholder_text = "e.g. ABCD"
 	_ip_field.alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_ip_field.custom_minimum_size = Vector2(280, 44)
@@ -312,7 +312,7 @@ func _on_room_created(code: String) -> void:
 
 func _on_join_pressed() -> void:
 	var address := _ip_field.text.strip_edges().to_upper()
-	GameSettings.set_last_join_ip(address)
+	GameSettings.set_last_join_code(address)
 	_join_status.text = "Connecting to room %s..." % address
 	_join_button.disabled = true
 	var err := NetworkManager.join_game(address)

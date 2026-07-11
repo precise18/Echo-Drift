@@ -24,7 +24,7 @@ var volumes := {
 
 var mouse_sensitivity := 1.0 # multiplier on PlayerController's base sensitivity
 var fullscreen := false
-var last_join_ip := "127.0.0.1"
+var last_join_code := ""
 var preferred_role := 0 # 0: Any, 1: Hider, 2: Hunter
 
 
@@ -50,8 +50,8 @@ func set_fullscreen(enabled: bool) -> void:
 	save()
 
 
-func set_last_join_ip(ip: String) -> void:
-	last_join_ip = ip
+func set_last_join_code(ip: String) -> void:
+	last_join_code = ip
 	save()
 
 func set_preferred_role(role: int) -> void:
@@ -65,7 +65,7 @@ func save() -> void:
 		config.set_value("audio", String(bus_name), volumes[bus_name])
 	config.set_value("input", "mouse_sensitivity", mouse_sensitivity)
 	config.set_value("display", "fullscreen", fullscreen)
-	config.set_value("network", "last_join_ip", last_join_ip)
+	config.set_value("network", "last_join_code", last_join_code)
 	config.set_value("game", "preferred_role", preferred_role)
 	config.save(SAVE_PATH)
 
@@ -78,7 +78,7 @@ func _load() -> void:
 		volumes[bus_name] = clampf(config.get_value("audio", String(bus_name), 1.0), 0.0, 1.0)
 	mouse_sensitivity = clampf(config.get_value("input", "mouse_sensitivity", 1.0), 0.2, 3.0)
 	fullscreen = config.get_value("display", "fullscreen", false)
-	last_join_ip = config.get_value("network", "last_join_ip", "127.0.0.1")
+	last_join_code = config.get_value("network", "last_join_code", "")
 	preferred_role = config.get_value("game", "preferred_role", 0)
 
 
