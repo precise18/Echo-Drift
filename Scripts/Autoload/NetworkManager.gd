@@ -65,9 +65,16 @@ func _on_webrtc_match_ready() -> void:
 
 func host_game() -> Error:
 	WebRTCSignaler.start_host()
+	enter_game_as_host()
+	return OK
+
+func enter_game_as_host() -> void:
 	connected_peer_ids = [1] # the host is always peer id 1
 	TransitionScreen.cover("Entering %s..." % MapManager.get_map_name(MapManager.selected_map_id))
 	get_tree().change_scene_to_file(GAME_SCENE)
+
+func quick_play() -> Error:
+	WebRTCSignaler.start_quick_play()
 	return OK
 
 

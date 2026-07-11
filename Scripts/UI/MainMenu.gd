@@ -85,8 +85,9 @@ func _build_title_screen() -> Control:
 	vbox.add_child(_spacer(18))
 
 	var buttons := {
-		"Host Game": func() -> void: _show_screen("host"),
-		"Join Game": func() -> void: _show_screen("join"),
+		"Quick Play (Public)": func() -> void: _on_quick_play_pressed(),
+		"Host Private Game": func() -> void: _show_screen("host"),
+		"Join Private Game": func() -> void: _show_screen("join"),
 		"Settings": func() -> void: _show_screen("settings"),
 		"Credits": func() -> void: _show_screen("credits"),
 	}
@@ -200,6 +201,12 @@ func _on_start_hosting_pressed() -> void:
 	if err != OK:
 		_notice_label.text = "Could not host (error %d)." % err
 		_show_screen("title")
+
+func _on_quick_play_pressed() -> void:
+	_notice_label.text = "Searching for public match..."
+	var err := NetworkManager.quick_play()
+	if err != OK:
+		_notice_label.text = "Quick Play failed (error %d)." % err
 
 func _on_room_created(code: String) -> void:
 	_room_code_label.text = "Room Code: " + code + "\nWaiting for opponent..."

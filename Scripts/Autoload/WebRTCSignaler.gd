@@ -57,13 +57,28 @@ func start_client(room_code: String):
 	if err == OK:
 		set_process(true)
 
+func start_quick_play():
+	# We don't know if we are host or client yet!
+	is_host = false
+	_pending_action = JSON.stringify({"type": "quick_play"})
+	var err = ws.connect_to_url(server_url)
+	if err == OK:
+		set_process(true)
+
 func _handle_message(msg: Dictionary):
 	if msg.type == "room_created":
 		current_room_code = msg.room
+		if msg.get("is_public", false):
+			is_host = true
+			webrtc_mp.create_server()
+			multiplayer.multiplayer_peer = webrtc_mp
+			NetworkManager.enter_game_as_host()
 		room_created.emit(msg.room)
 	elif msg.type == "error":
 		room_error.emit(msg.message)
 	elif msg.type == "peer_connected":
+		if msg.has("is_host"):
+			is_host = msg.is_host
 		_setup_webrtc()
 	elif msg.type == "webrtc_signal":
 		_handle_signal(msg.data)
@@ -80,6 +95,8 @@ func _setup_webrtc():
 	webrtc_conn.ice_candidate_created.connect(_on_ice_candidate)
 	
 	if is_host:
+		# If we are host of a private game, create_server is already called in start_host
+		# If we are host of a public game, create_server is already called in room_created
 		webrtc_mp.add_peer(webrtc_conn, 2) # Client is peer 2
 		webrtc_conn.create_offer()
 	else:
