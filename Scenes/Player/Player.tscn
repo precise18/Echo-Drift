@@ -1,64 +1,51 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene format=3 uid="uid://dur85nxfwynaj"]
 
-[ext_resource type="Script" path="res://Scripts/Player/PlayerController.gd" id="1_ctrl"]
-[ext_resource type="Material" path="res://Materials/player_hider_material.tres" id="2_mat"]
-[ext_resource type="AnimationLibrary" path="res://Assets/Characters/MovementAnimations.tres" id="3_anims"]
+[ext_resource type="Script" uid="uid://cbamwdpscfeoh" path="res://Scripts/Player/PlayerController.gd" id="1"]
+[ext_resource type="PackedScene" uid="uid://dn8ogr37a5tb1" path="res://Assets/Characters/animations/idle/sample_1_idle.glb" id="2"]
+[ext_resource type="Script" uid="uid://bcixw2phoyx5m" path="res://Scripts/Player/components/movement_component.gd" id="3"]
+[ext_resource type="Script" uid="uid://dg7c5xv1nmj04" path="res://Scripts/Player/components/animation_component.gd" id="4"]
+[ext_resource type="Script" uid="uid://bf055mg0ucgla" path="res://Scripts/Player/components/camera_component.gd" id="5"]
 
-[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_body"]
-radius = 0.4
-height = 1.6
+[sub_resource type="CapsuleShape3D" id="6"]
+radius = 0.3
+height = 1.8
 
-[sub_resource type="CapsuleMesh" id="CapsuleMesh_body"]
-radius = 0.4
-height = 1.6
+[node name="Player" type="CharacterBody3D" unique_id=1048418180]
+script = ExtResource("1")
 
-[sub_resource type="BoxMesh" id="BoxMesh_face"]
-size = Vector3(0.16, 0.16, 0.06)
+[node name="CollisionShape3D" type="CollisionShape3D" parent="." unique_id=208114295]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+shape = SubResource("6")
+
+[node name="MovementComponent" type="Node" parent="." unique_id=626669589]
+script = ExtResource("3")
+
+[node name="AnimationComponent" type="Node" parent="." unique_id=1355179313]
+script = ExtResource("4")
+
+[node name="Model" type="Node3D" parent="." unique_id=531622032]
+
+[node name="ModelInstance" parent="Model" unique_id=575357345 instance=ExtResource("2")]
+
+[node name="CameraYaw" type="Node3D" parent="." unique_id=503366752]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 0)
+script = ExtResource("5")
+distance = null
+sensitivity = null
+follow_speed = null
+
+[node name="CameraPitch" type="SpringArm3D" parent="CameraYaw" unique_id=780801524]
+
+[node name="Camera3D" type="Camera3D" parent="CameraYaw/CameraPitch" unique_id=420976325]
+transform = Transform3D(-0.9988905, -0.009360589, 0.046152655, 9.421818e-05, 0.9796467, 0.20072922, -0.04709223, 0.20051077, -0.978559, 4.340447, 51.31243, -86.365074)
 
 [sub_resource type="SceneReplicationConfig" id="SceneReplicationConfig_player"]
 properties/0/path = NodePath(".:position")
 properties/0/spawn = true
 properties/0/replication_mode = 2
-properties/1/path = NodePath("BodyMesh:rotation:y")
+properties/1/path = NodePath("Model:rotation:y")
 properties/1/spawn = true
 properties/1/replication_mode = 2
-
-[node name="Player" type="CharacterBody3D"]
-collision_layer = 2
-collision_mask = 3
-physics_interpolation_mode = 1
-script = ExtResource("1_ctrl")
-
-[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
-shape = SubResource("CapsuleShape3D_body")
-
-[node name="BodyMesh" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
-mesh = SubResource("CapsuleMesh_body")
-surface_material_override/0 = ExtResource("2_mat")
-
-[node name="FaceIndicator" type="MeshInstance3D" parent="BodyMesh"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.55, -0.36)
-mesh = SubResource("BoxMesh_face")
-
-[node name="CameraPivot" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.55, 0)
-
-[node name="SpringArm3D" type="SpringArm3D" parent="CameraPivot"]
-transform = Transform3D(-1, 0, 8.74228e-08, 0, 1, 0, -8.74228e-08, 0, -1, 0, 0, 0)
-collision_mask = 1
-spring_length = 4.0
-margin = 0.3
-
-[node name="Camera3D" type="Camera3D" parent="CameraPivot/SpringArm3D"]
-transform = Transform3D(-1, 0, 8.74228e-08, 0, 1, 0, -8.74228e-08, 0, -1, 0, 0, 0)
-fov = 75.0
-
-[node name="AnimPlayer" type="AnimationPlayer" parent="."]
-libraries = {
-"": ExtResource("3_anims")
-}
 
 [node name="MultiplayerSynchronizer" type="MultiplayerSynchronizer" parent="."]
 replication_config = SubResource("SceneReplicationConfig_player")

@@ -1,67 +1,54 @@
 extends CharacterBody3D
-## Single responsibility: local input -> movement for the player this peer
-## owns. Non-authority instances are pure puppets driven entirely by
-## MultiplayerSynchronizer and never process input or physics here.
-
-const WALK_SPEED := 4.0
-const SPRINT_SPEED := 7.5
-const JUMP_VELOCITY := 6.5
-const MOUSE_SENSITIVITY := 0.0035
-const GROUND_ACCEL := 10.0
-const AIR_ACCEL := 3.0
-const PITCH_MIN := deg_to_rad(-60)
-const PITCH_MAX := deg_to_rad(60)
-const FACE_TURN_SPEED := 12.0
 
 var HIDER_MATERIAL: Material = load("res://Materials/player_hider_material.tres")
 var HUNTER_MATERIAL: Material = load("res://Materials/player_hunter_material.tres")
 
-@onready var camera_pivot: Node3D = $CameraPivot
-@onready var spring_arm: SpringArm3D = $CameraPivot/SpringArm3D
-@onready var camera: Camera3D = $CameraPivot/SpringArm3D/Camera3D
-@onready var body_mesh: MeshInstance3D = $BodyMesh
-@onready var anim_player: AnimationPlayer = $AnimPlayer
+@onready var movement: Node   = $MovementComponent
+@onready var camera:   Node3D = $CameraYaw
+@onready var anim:     Node   = $AnimationComponent
+
+var _was_airborne := false
+var _base_scale := Vector3.ONE
+
+var _chest_ray: RayCast3D
+var _head_ray: RayCast3D
+var is_mantling: bool = false
 
 var peer_id: int = -1
-var _gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
-var _camera_pitch := 0.0
-
 
 func _ready() -> void:
 	peer_id = name.to_int()
-	# Every peer adds this to every player body, local or remote — it
-	# derives steps from observed movement (replicated position included),
-	# so both players' footsteps are audible and positional everywhere
-	# with no footstep networking (see FootstepEmitter.gd).
+	
+	anim.setup($Model/ModelInstance)
+	_autofit_model()   # coroutine — runs after first frame, doesn't block _ready
+	
+	_chest_ray = RayCast3D.new()
+	_head_ray = RayCast3D.new()
+	add_child(_chest_ray)
+	add_child(_head_ray)
+	
+	_chest_ray.position = Vector3(0, 1.2, 0)
+	_chest_ray.target_position = Vector3(0, 0, -0.6)
+	_head_ray.position = Vector3(0, 2.1, 0)
+	_head_ray.target_position = Vector3(0, 0, -0.6)
+
 	var footsteps := FootstepEmitter.new()
 	footsteps.name = "Footsteps"
 	footsteps.stream = SoundFactory.footstep()
 	add_child(footsteps)
+	
 	apply_authority_state()
 	_refresh_role_material()
 	RoundManager.role_assigned.connect(_on_role_assigned)
 
-
-## Everything about this body that depends on WHO owns it, in one
-## re-runnable place. Called from _ready, but _ready's answer can be
-## wrong: replicated nodes reach _ready before the receiving peer has
-## assigned their real authority (Main._on_node_spawned does that
-## afterward, then calls this again). Idempotent on purpose — the
-## is_connected guards make repeat calls safe.
 func apply_authority_state() -> void:
-	camera.current = is_multiplayer_authority()
 	if is_multiplayer_authority():
+		camera._cam.make_current()
 		if not get_window().focus_entered.is_connected(_capture_mouse):
-			# On X11/XWayland, grabbing the mouse before the window actually
-			# has OS focus silently fails (no error visible to the player,
-			# camera look just doesn't work). Re-capture whenever focus
-			# returns so a failed initial grab — or an alt-tab away and back
-			# — self-heals.
 			get_window().focus_entered.connect(_capture_mouse)
 		_capture_mouse()
 	elif get_window().focus_entered.is_connected(_capture_mouse):
 		get_window().focus_entered.disconnect(_capture_mouse)
-
 
 func _exit_tree() -> void:
 	if RoundManager.role_assigned.is_connected(_on_role_assigned):
@@ -69,90 +56,143 @@ func _exit_tree() -> void:
 	if get_window().focus_entered.is_connected(_capture_mouse):
 		get_window().focus_entered.disconnect(_capture_mouse)
 
-
 func _capture_mouse() -> void:
-	# A HUD overlay that needs the cursor (pause menu, game over) wins:
-	# don't steal the mouse back on window refocus while one is open.
 	if UIKit.block_mouse_capture:
 		return
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
-
 func _on_role_assigned(_peer_id: int, _role: int) -> void:
 	_refresh_role_material()
 
-
 func _refresh_role_material() -> void:
-	body_mesh.material_override = HUNTER_MATERIAL if peer_id == RoundManager.hunter_id else HIDER_MATERIAL
+	# Iterate through all mesh instances and update material override
+	var is_hunter = peer_id == RoundManager.hunter_id
+	var mat = HUNTER_MATERIAL if is_hunter else HIDER_MATERIAL
+	_apply_material_recursive($Model/ModelInstance, mat)
 
+func _apply_material_recursive(node: Node, mat: Material) -> void:
+	if node is MeshInstance3D:
+		node.material_override = mat
+	for child in node.get_children():
+		_apply_material_recursive(child, mat)
 
-## ESC is no longer handled here — the HUD's pause menu owns it (and
-## owns Input.mouse_mode while open). Mouse-look is naturally inert while
-## paused because the mouse isn't captured then.
-func _unhandled_input(event: InputEvent) -> void:
-	if not is_multiplayer_authority():
-		return
-	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
-		var sensitivity := MOUSE_SENSITIVITY * GameSettings.mouse_sensitivity
-		camera_pivot.rotate_y(-event.relative.x * sensitivity)
-		_camera_pitch = clampf(_camera_pitch - event.relative.y * sensitivity, PITCH_MIN, PITCH_MAX)
-		spring_arm.rotation.x = _camera_pitch
+func _execute_mantle() -> void:
+	is_mantling = true
+	anim.play("jump_start")
+	velocity = Vector3.ZERO
+	
+	var tween = create_tween()
+	var mantle_up = global_position + Vector3(0, 1.6, 0)
+	var mantle_fwd = mantle_up + movement.direction * 1.0
+	
+	tween.tween_property(self, "global_position", mantle_up, 0.15).set_trans(Tween.TRANS_SINE)
+	tween.tween_property(self, "global_position", mantle_fwd, 0.15).set_trans(Tween.TRANS_LINEAR)
+	tween.tween_callback(func(): is_mantling = false)
 
+var _last_position := Vector3.ZERO
 
 func _physics_process(delta: float) -> void:
 	if not is_multiplayer_authority():
+		# Animate puppets based on positional changes since velocity isn't synced
+		var pos_delta = global_position - _last_position
+		_last_position = global_position
+		
+		var h_speed = Vector2(pos_delta.x, pos_delta.z).length() / delta
+		var v_speed = pos_delta.y / delta
+		
+		if h_speed > 0.1:
+			anim.play("run" if h_speed > 5.0 else "walk")
+		else:
+			anim.play("idle")
 		return
+		
+	if is_mantling:
+		return
+		
+	if not (RoundManager.round_active or MatchStateManager.is_in_lobby()):
+		movement.tick(delta, Vector2.ZERO, false, camera.get_forward(), camera.get_right())
+		anim.play("idle")
+		return
+		
+	var input_dir  := Input.get_vector("move_left", "move_right", "move_forward", "move_backward")
+	var is_running := Input.is_action_pressed("sprint")
 
-	if is_on_floor():
-		velocity.y = -0.1
+	movement.tick(delta, input_dir, is_running, camera.get_forward(), camera.get_right())
+	camera.follow_behind(movement.direction, delta)
+	anim.face_direction(movement.direction, delta)
+	
+	if movement.direction.length() > 0.1:
+		_chest_ray.target_position = movement.direction * 0.6
+		_head_ray.target_position = movement.direction * 0.6
+
+	var h_speed := Vector2(velocity.x, velocity.z).length()
+	camera.update_fov(h_speed, movement.run_speed, delta)
+
+	var is_airborne = movement.is_airborne()
+	
+	# Ledge Grabbing Logic
+	if is_airborne and movement.vertical_velocity() < 0.0:
+		if _chest_ray.is_colliding() and not _head_ray.is_colliding():
+			_execute_mantle()
+		anim.play("jump_start" if movement.vertical_velocity() > 0 else "jump_fall")
+	elif movement.is_moving():
+		anim.play("run" if is_running else "walk")
 	else:
-		velocity.y -= _gravity * delta
+		anim.play("idle")
 
-	# Movement is allowed during the round and during the warm-up lobby
-	# (players explore the arena while waiting for the host to start);
-	# it locks only between rounds and on the game-over screen, so nobody
-	# repositions during a transition.
-	if RoundManager.round_active or MatchStateManager.is_in_lobby():
-		_handle_movement_input(delta)
-	else:
-		velocity.x = move_toward(velocity.x, 0.0, GROUND_ACCEL * delta)
-		velocity.z = move_toward(velocity.z, 0.0, GROUND_ACCEL * delta)
+	is_airborne = movement.is_airborne()
+	if _was_airborne and not is_airborne:
+		_squash_and_stretch()
+	_was_airborne = is_airborne
 
-	move_and_slide()
-	_update_animation()
+func _input(event: InputEvent) -> void:
+	if not is_multiplayer_authority():
+		return
+	if event is InputEventMouseMotion and Input.get_mouse_mode() == Input.MOUSE_MODE_CAPTURED:
+		camera.handle_mouse(event)
 
+func _squash_and_stretch() -> void:
+	if _base_scale == Vector3.ONE and $Model.scale != Vector3.ONE:
+		_base_scale = $Model.scale
+		
+	var model: Node3D = $Model
+	var tween = create_tween()
+	var squash = _base_scale * Vector3(1.3, 0.7, 1.3)
+	var stretch = _base_scale * Vector3(0.9, 1.1, 0.9)
+	
+	tween.tween_property(model, "scale", squash, 0.06).set_trans(Tween.TRANS_SINE)
+	tween.tween_property(model, "scale", stretch, 0.1).set_trans(Tween.TRANS_SPRING)
+	tween.tween_property(model, "scale", _base_scale, 0.1)
 
-func _handle_movement_input(delta: float) -> void:
-	var input_dir := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
-	var move_basis := camera_pivot.transform.basis
-	var move_dir := (move_basis * Vector3(input_dir.x, 0.0, input_dir.y))
-	move_dir.y = 0.0
-	move_dir = move_dir.normalized()
+func _autofit_model() -> void:
+	await get_tree().process_frame   
+	var model: Node3D = $Model
+	var aabb: AABB    = _node_aabb(model)
+	if aabb.size.y < 0.001:
+		push_warning("Player: model AABB is empty — auto-fit skipped.")
+		return
+	var s: float      = 1.8 / aabb.size.y   
+	model.scale       = Vector3(s, s, s)
+	model.position.y  = -(aabb.position.y * s) + 0.5  
 
-	var speed := SPRINT_SPEED if Input.is_action_pressed("sprint") else WALK_SPEED
-	var target_velocity := move_dir * speed
-	var accel := GROUND_ACCEL if is_on_floor() else AIR_ACCEL
-
-	velocity.x = move_toward(velocity.x, target_velocity.x, accel * delta)
-	velocity.z = move_toward(velocity.z, target_velocity.z, accel * delta)
-
-	if Input.is_action_just_pressed("jump") and is_on_floor():
-		velocity.y = JUMP_VELOCITY
-
-	# move_dir is already normalized, so this is just "is there any input"
-	# (Vector3.normalized() safely returns ZERO for a zero-length input).
-	if move_dir.length() > 0.1:
-		var target_yaw := atan2(move_dir.x, move_dir.z)
-		body_mesh.rotation.y = lerp_angle(body_mesh.rotation.y, target_yaw, FACE_TURN_SPEED * delta)
-
-
-func _update_animation() -> void:
-	var horizontal_speed := Vector2(velocity.x, velocity.z).length()
-	if not is_on_floor():
-		anim_player.play("Idle")
-	elif horizontal_speed > WALK_SPEED + 0.5:
-		anim_player.play("Run")
-	elif horizontal_speed > 0.3:
-		anim_player.play("Walk")
-	else:
-		anim_player.play("Idle")
+func _node_aabb(node: Node3D) -> AABB:
+	var result := AABB()
+	var found  := false
+	if node is MeshInstance3D:
+		var a: AABB = (node as MeshInstance3D).get_aabb()
+		if a.size.length_squared() > 0.0:
+			result = node.transform * a
+			found  = true
+	for child: Node in node.get_children():
+		if not (child is Node3D):
+			continue
+		var ca: AABB = _node_aabb(child as Node3D)
+		if ca.size.length_squared() < 0.001:
+			continue
+		var in_parent: AABB = (child as Node3D).transform * ca
+		if found:
+			result = result.merge(in_parent)
+		else:
+			result = in_parent
+			found  = true
+	return result
