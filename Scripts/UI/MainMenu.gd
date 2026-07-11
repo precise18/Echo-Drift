@@ -140,7 +140,7 @@ func _build_title_screen() -> Control:
 			_server_stats_label.text = "Public Server: Offline"
 		http.queue_free()
 	)
-	http.request(get_node("/root/WebRTCSignaler").server_url.replace("wss://", "https://").replace("ws://", "http://"))
+	http.request(get_node("/root/WebRTCSignaler").server_url.replace("wss://", "https://").replace("ws://", "http://") + "/api/stats")
 
 	vbox.add_child(UIKit.make_title("2-player LAN  •  built with Godot", 12, UIKit.COLOR_MUTED))
 	return root
