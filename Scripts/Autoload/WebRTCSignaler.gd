@@ -157,5 +157,7 @@ func _on_ice_candidate(media: String, index: int, name: String):
 func _handle_signal(data: Dictionary):
 	if data.type == "sdp":
 		webrtc_conn.set_remote_description(data.sdp_type, data.sdp)
+		if data.sdp_type == "offer":
+			webrtc_conn.create_answer()
 	elif data.type == "ice":
 		webrtc_conn.add_ice_candidate(data.media, data.index, data.name)
