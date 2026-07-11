@@ -46,6 +46,12 @@ func _ready() -> void:
 
 	NetworkManager.connection_failed.connect(_on_connection_failed)
 	get_node("/root/WebRTCSignaler").room_created.connect(_on_room_created)
+	# The other party bailed during signaling (before WebRTC even
+	# finished setting up) — e.g. a host cancels while we're still on the
+	# Connecting screen trying to join them. Previously this signal had
+	# zero listeners anywhere in the project (see PACKET_TRACE.md /
+	# UI_STATE_MACHINE.md) — a real disconnect with no feedback at all.
+	get_node("/root/WebRTCSignaler").disconnected.connect(_on_signaling_disconnected)
 
 	# Explains why the player landed back here instead of silently
 	# dumping them at the menu — e.g. after the host disconnected. This
@@ -67,6 +73,13 @@ func _show_screen(name: String) -> void:
 	_current_screen = name
 	for key: String in _screens:
 		_screens[key].visible = key == name
+	# Previously the room list only ever populated when the Refresh button
+	# was clicked -- opening "Server Browser" fresh showed a permanently
+	# blank list until the user noticed and pressed it themselves. This is
+	# the one place every path into the browser screen actually funnels
+	# through, so it's the correct spot to guarantee a fetch on entry.
+	if name == "browser":
+		_refresh_browser()
 
 
 # ---------------------------------------------------------------------------
@@ -227,6 +240,21 @@ func _build_browser_screen() -> Control:
 	content.add_child(refresh)
 
 	content.add_child(_make_back_button())
+
+	# Previously the list was a one-shot snapshot: a room created by a host
+	# *after* you opened this screen (or after your last manual Refresh
+	# click) would just never appear until you noticed and clicked Refresh
+	# again yourself. Polling only while this screen is actually the one
+	# showing avoids firing HTTP requests in the background for no reason.
+	var auto_refresh := Timer.new()
+	auto_refresh.wait_time = 5.0
+	auto_refresh.autostart = true
+	auto_refresh.timeout.connect(func() -> void:
+		if _current_screen == "browser":
+			_refresh_browser()
+	)
+	add_child(auto_refresh)
+
 	return screen["root"]
 
 func _refresh_browser() -> void:
@@ -344,9 +372,26 @@ func _on_join_pressed() -> void:
 		_notice_label.text = "Could not start connecting (error %d)." % err
 
 
+## Fires both for an outright ENet connection failure and for
+## NetworkManager's WebRTC handshake-timeout passthrough (see
+## NetworkManager._ready() / WebRTCSignaler.connection_timed_out) — the
+## wording stays generic since both boil down to "didn't connect, retry."
 func _on_connection_failed() -> void:
 	_show_screen("title")
-	_notice_label.text = "Connection failed. Check the Room Code and try again."
+	_notice_label.text = "Connection failed or timed out. Check the Room Code and try again."
+
+
+## The other party's WebSocket-level disconnect (see WebRTCSignaler's
+## "peer_disconnected" message handling) — only meaningful while we're
+## still actually on the Connecting screen trying to reach them; if we're
+## anywhere else (browsing menus with no attempt in flight), this fired
+## for a stale/unrelated reason and there's no active screen to correct.
+func _on_signaling_disconnected() -> void:
+	if _current_screen != "connecting":
+		return
+	NetworkManager.cancel_connection()
+	_show_screen("title")
+	_notice_label.text = "The other player disconnected before the match could start."
 
 
 # ---------------------------------------------------------------------------

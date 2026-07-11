@@ -23,6 +23,7 @@ config/icon="res://icon.svg"
 
 [autoload]
 
+PacketTrace="*res://Scripts/Autoload/PacketTrace.gd"
 NetworkManager="*res://Scripts/Autoload/NetworkManager.gd"
 MatchStateManager="*res://Scripts/Autoload/MatchStateManager.gd"
 RoundManager="*res://Scripts/Autoload/RoundManager.gd"

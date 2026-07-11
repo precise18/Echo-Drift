@@ -58,6 +58,7 @@ func _on_timer_expired() -> void:
 	# only the server's expiry is authoritative for ending the round.
 	if multiplayer.multiplayer_peer == null or not multiplayer.is_server():
 		return
+	PacketTrace.sent("end_round", multiplayer.get_unique_id(), "ALL (broadcast + call_local)", "winner_role=HIDER (timeout)", "_end_round") # TEMP DEBUG
 	_end_round.rpc(Role.HIDER) # time ran out, hider survived
 
 
@@ -82,6 +83,7 @@ func _check_for_capture() -> void:
 	if hunter_node == null or hider_node == null:
 		return
 	if WinConditions.is_capture(hunter_node.global_position, hider_node.global_position):
+		PacketTrace.sent("end_round", multiplayer.get_unique_id(), "ALL (broadcast + call_local)", "winner_role=HUNTER (capture)", "_end_round") # TEMP DEBUG
 		_end_round.rpc(Role.HUNTER)
 
 
@@ -128,7 +130,12 @@ func start_round() -> void:
 		return
 	var roles := RoleManager.assign_roles(NetworkManager.connected_peer_ids, _next_hider_id, NetworkManager.peer_preferred_roles)
 	if roles.is_empty():
+		# TEMP DEBUG: the "packet never sent" case for apply_round_state --
+		# RoleManager needs both players present; if it doesn't, the RPC
+		# call below is never reached at all.
+		PacketTrace.sent("apply_round_state", multiplayer.get_unique_id(), "ALL (broadcast + call_local)", "N/A", "_apply_round_state -- NOT SENT: RoleManager.assign_roles() returned empty (fewer than 2 players present)")
 		return
+	PacketTrace.sent("apply_round_state", multiplayer.get_unique_id(), "ALL (broadcast + call_local)", "hider_id=%s hunter_id=%s time=%s" % [roles["hider_id"], roles["hunter_id"], ROUND_TIME], "_apply_round_state") # TEMP DEBUG
 	_apply_round_state.rpc(roles["hider_id"], roles["hunter_id"], ROUND_TIME)
 
 
@@ -137,6 +144,12 @@ var _capture_grace_until_msec := 0
 
 @rpc("authority", "call_local", "reliable")
 func _apply_round_state(new_hider_id: int, new_hunter_id: int, starting_time: float) -> void:
+	# TEMP DEBUG: no guard clause in this function -- if it runs at all, it
+	# always fully executes ("authority" restriction already means Godot
+	# itself would refuse to let a non-authority peer send this in the
+	# first place, so there's no local-echo-then-bail case like
+	# NetworkManager._register_session has).
+	PacketTrace.received("apply_round_state", multiplayer.get_remote_sender_id(), multiplayer.get_unique_id(), "hider_id=%d hunter_id=%d time=%s" % [new_hider_id, new_hunter_id, starting_time], "_apply_round_state", "_apply_round_state (handled, no guard)")
 	hider_id = new_hider_id
 	hunter_id = new_hunter_id
 	_capture_grace_until_msec = Time.get_ticks_msec() + int(CAPTURE_GRACE * 1000.0)
@@ -151,6 +164,7 @@ func _apply_round_state(new_hider_id: int, new_hunter_id: int, starting_time: fl
 
 @rpc("authority", "call_local", "reliable")
 func _end_round(winner_role: int) -> void:
+	PacketTrace.received("end_round", multiplayer.get_remote_sender_id(), multiplayer.get_unique_id(), "winner_role=%d" % winner_role, "_end_round", "_end_round (handled, no guard)") # TEMP DEBUG
 	round_active = false
 	_timer.stop()
 	MatchStateManager.record_round_result(winner_role)
@@ -183,15 +197,26 @@ func _on_next_round_delay_elapsed() -> void:
 ## Called locally by HUD's Game Over screen on any peer; forwards the
 ## request to the server.
 func request_rematch() -> void:
+	PacketTrace.sent("request_rematch", multiplayer.get_unique_id(), 1, "N/A", "_request_rematch") # TEMP DEBUG
 	_request_rematch.rpc_id(1)
 
 
 @rpc("any_peer", "call_local", "reliable")
 func _request_rematch() -> void:
+	# TEMP DEBUG: "call_local" means whoever clicked Rematch runs this on
+	# their OWN machine too (get_remote_sender_id() == 0 there), even
+	# though .rpc_id(1) only ever targets the server -- so a non-host
+	# client clicking Rematch predictably hits the "not server" half of
+	# this guard locally every time, by design, not a bug.
+	var is_local_call := multiplayer.get_remote_sender_id() == 0
 	if not multiplayer.is_server() or not MatchStateManager.is_match_over():
+		var reason := "not server" if not multiplayer.is_server() else "match not over"
+		PacketTrace.received("request_rematch", ("LOCAL_CALL" if is_local_call else multiplayer.get_remote_sender_id()), multiplayer.get_unique_id(), "N/A", "_request_rematch", "IGNORED (%s)" % reason)
 		return
+	PacketTrace.received("request_rematch", ("LOCAL_CALL(self)" if is_local_call else multiplayer.get_remote_sender_id()), multiplayer.get_unique_id(), "N/A", "_request_rematch", "_request_rematch (handled)") # TEMP DEBUG
 	# Both RPCs are reliable and ordered, so every peer resets to 0–0
 	# before the new round-1 state lands.
+	PacketTrace.sent("reset_match", multiplayer.get_unique_id(), "ALL (broadcast + call_local)", "N/A", "_reset_match") # TEMP DEBUG
 	_reset_match.rpc()
 	_next_hider_id = -1
 	start_round()
@@ -199,6 +224,7 @@ func _request_rematch() -> void:
 
 @rpc("authority", "call_local", "reliable")
 func _reset_match() -> void:
+	PacketTrace.received("reset_match", multiplayer.get_remote_sender_id(), multiplayer.get_unique_id(), "N/A", "_reset_match", "_reset_match (handled, no guard)") # TEMP DEBUG
 	MatchStateManager.reset()
 
 
@@ -211,11 +237,18 @@ func _reset_match() -> void:
 ## hider_id/hunter_id and needs correcting too.
 func reassign_role(new_peer_id: int, role: int) -> void:
 	if not multiplayer.is_server():
+		# TEMP DEBUG: "packet never sent" case -- reassign_role() is only
+		# ever actually called by Main.gd's server-only branch, so this
+		# guard shouldn't be reachable in practice, but it's here for the
+		# same reason every other RPC-sending function double-checks
+		# authority before sending.
+		PacketTrace.sent("resync_after_reconnect", multiplayer.get_unique_id(), "ALL (broadcast + call_local)", "N/A", "_resync_after_reconnect -- NOT SENT: not server")
 		return
 	if role == Role.HIDER:
 		hider_id = new_peer_id
 	else:
 		hunter_id = new_peer_id
+	PacketTrace.sent("resync_after_reconnect", multiplayer.get_unique_id(), "ALL (broadcast + call_local)", "hider_id=%d hunter_id=%d active=%s time=%s" % [hider_id, hunter_id, round_active, time_left], "_resync_after_reconnect") # TEMP DEBUG
 	_resync_after_reconnect.rpc(hider_id, hunter_id, round_active, time_left)
 
 
@@ -225,6 +258,7 @@ func reassign_role(new_peer_id: int, role: int) -> void:
 ## leaves it inactive rather than forcing a round back open).
 @rpc("authority", "call_local", "reliable")
 func _resync_after_reconnect(synced_hider_id: int, synced_hunter_id: int, active: bool, remaining_time: float) -> void:
+	PacketTrace.received("resync_after_reconnect", multiplayer.get_remote_sender_id(), multiplayer.get_unique_id(), "hider_id=%d hunter_id=%d active=%s time=%s" % [synced_hider_id, synced_hunter_id, active, remaining_time], "_resync_after_reconnect", "_resync_after_reconnect (handled, no guard)") # TEMP DEBUG
 	hider_id = synced_hider_id
 	hunter_id = synced_hunter_id
 	round_active = active

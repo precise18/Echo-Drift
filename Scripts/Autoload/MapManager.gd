@@ -67,12 +67,22 @@ func instantiate_selected_map() -> Node3D:
 ## they know the active map as early as possible (independent of
 ## whatever pace their own scene loading happens at).
 func sync_to_peer(peer_id: int) -> void:
+	PacketTrace.sent("receive_map_id", multiplayer.get_unique_id(), peer_id, "map_id=%s" % selected_map_id, "_receive_map_id") # TEMP DEBUG
 	_receive_map_id.rpc_id(peer_id, selected_map_id)
 
 
 @rpc("authority", "call_remote", "reliable")
 func _receive_map_id(map_id: String) -> void:
+	# TEMP DEBUG: an unrecognized map_id was previously tolerated completely
+	# silently -- selected_map_id just stayed at its old value and
+	# _has_synced/map_selected fired anyway, giving no sign anything was
+	# wrong. That's "a packet with invalid format/payload" handled with
+	# zero trace, exactly the case this instrumentation pass is meant to
+	# surface.
 	if MAPS.has(map_id):
 		selected_map_id = map_id
+		PacketTrace.received("receive_map_id", multiplayer.get_remote_sender_id(), multiplayer.get_unique_id(), "map_id=%s" % map_id, "_receive_map_id", "_receive_map_id (handled)")
+	else:
+		PacketTrace.received("receive_map_id", multiplayer.get_remote_sender_id(), multiplayer.get_unique_id(), "map_id=%s" % map_id, "_receive_map_id", "INVALID_PAYLOAD -- unrecognized map_id, silently kept old selected_map_id=%s" % selected_map_id)
 	_has_synced = true
 	map_selected.emit(selected_map_id)

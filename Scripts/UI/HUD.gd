@@ -80,6 +80,16 @@ func _ready() -> void:
 	NetworkManager.reconnect_grace_started.connect(_on_reconnect_grace_started)
 	NetworkManager.reconnect_grace_ended.connect(_on_reconnect_grace_ended)
 	get_node("/root/WebRTCSignaler").room_created.connect(_on_room_created)
+	# Otherwise silent for a host already sitting in the Lobby when a
+	# joiner's WebRTC handshake times out — see UI_STATE_MACHINE.md
+	# Finding 3. MainMenu's own connection_failed listener dies with its
+	# node the moment the host's scene changes, so this is the only place
+	# left that can tell the host a join attempt didn't work.
+	NetworkManager.connection_failed.connect(_on_lobby_connection_failed)
+	# Same gap, different signal: a joiner bailing during signaling (before
+	# the WebRTC handshake even completed) previously had zero listeners
+	# anywhere in the project — see PACKET_TRACE.md / UI_STATE_MACHINE.md.
+	get_node("/root/WebRTCSignaler").disconnected.connect(_on_signaling_disconnected)
 
 	_apply_phase(MatchStateManager.phase)
 	_update_mouse()
@@ -480,3 +490,33 @@ func _on_reconnect_grace_started(_role: int) -> void:
 func _on_reconnect_grace_ended(_role: int, _reconnected: bool) -> void:
 	_grace_deadline = -1.0
 	_connection_status_label.visible = false
+
+
+## Fires from NetworkManager.connection_failed, which now also covers a
+## WebRTC handshake that timed out (see WebRTCSignaler.HANDSHAKE_TIMEOUT_SEC).
+## Only relevant while still waiting in the Lobby for a second player —
+## once a match is underway, a lost connection is the reconnect-grace
+## path above instead, not a fresh join attempt failing.
+func _on_lobby_connection_failed() -> void:
+	if not MatchStateManager.is_in_lobby():
+		return
+	_show_transient_status("A connection attempt failed or timed out. Still waiting for a player...")
+
+
+## Fires from WebRTCSignaler.disconnected when the other party's WebSocket
+## signaling drops (e.g. a joiner cancels or crashes before the WebRTC
+## handshake completes) — a different failure point than the timeout
+## above, so it gets its own listener rather than being folded into it.
+func _on_signaling_disconnected() -> void:
+	if not MatchStateManager.is_in_lobby():
+		return
+	_show_transient_status("The other player disconnected before the match could start. Still waiting for a player...")
+
+
+func _show_transient_status(message: String) -> void:
+	_connection_status_label.text = message
+	_connection_status_label.visible = true
+	get_tree().create_timer(6.0).timeout.connect(func() -> void:
+		if _grace_deadline <= 0.0: # don't clobber an unrelated reconnect-grace message
+			_connection_status_label.visible = false
+	)

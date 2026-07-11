@@ -55,22 +55,31 @@ func _ready() -> void:
 	multiplayer.connected_to_server.connect(_on_connected_to_server)
 	multiplayer.connection_failed.connect(_on_connection_failed)
 	multiplayer.server_disconnected.connect(_on_server_disconnected)
-	get_node("/root/WebRTCSignaler").match_ready.connect(_on_webrtc_match_ready)
+	# Handshake never completed within WebRTCSignaler.HANDSHAKE_TIMEOUT_SEC
+	# (e.g. no ICE candidate pair found) — reuse the same failure path as
+	# ENet's own connection_failed so MainMenu doesn't need any new wiring.
+	get_node("/root/WebRTCSignaler").connection_timed_out.connect(_on_connection_failed)
 	randomize()
 	local_session_id = "%d-%d" % [Time.get_ticks_usec(), randi()]
 
-func _on_webrtc_match_ready() -> void:
-	if not get_node("/root/WebRTCSignaler").is_host:
-		pass # We wait for connected_to_server instead for clients
 
-
+## Only starts the signaling handshake — the actual scene transition now
+## happens once the server confirms the room was created
+## (WebRTCSignaler._handle_message's room_created branch calls
+## enter_game_as_host() below), not eagerly here. Previously this called
+## enter_game_as_host() immediately, before the WebSocket had even
+## connected, racing the "Generating code..." connecting-screen label
+## against a scene change that had already happened.
 func host_game() -> Error:
 	get_node("/root/WebRTCSignaler").start_host()
-	enter_game_as_host()
 	return OK
 
 func enter_game_as_host() -> void:
 	connected_peer_ids = [1] # the host is always peer id 1
+	# TEMP DEBUG: this is a direct local function call, NOT an RPC/network
+	# packet — the host registering itself never touches the wire. Logged
+	# as such so it isn't mistaken for a real send in PACKET_TRACE.md.
+	PacketTrace.sent("register_session", "HOST(self)", "HOST(self)", "session_id=%s preferred_role=%d" % [local_session_id, GameSettings.preferred_role], "_register_session (direct call, not RPC -- no packet actually sent)")
 	_register_session(local_session_id, GameSettings.preferred_role)
 	TransitionScreen.cover("Entering %s..." % MapManager.get_map_name(MapManager.selected_map_id))
 	get_tree().change_scene_to_file(GAME_SCENE)
@@ -115,6 +124,7 @@ func _on_peer_disconnected(id: int) -> void:
 
 func _on_connected_to_server() -> void:
 	connected_peer_ids = [1, multiplayer.get_unique_id()]
+	PacketTrace.sent("register_session", multiplayer.get_unique_id(), 1, "session_id=%s preferred_role=%d" % [local_session_id, GameSettings.preferred_role], "_register_session") # TEMP DEBUG
 	_register_session.rpc_id(1, local_session_id, GameSettings.preferred_role)
 	# Load immediately rather than waiting for MapManager's sync RPC —
 	# Godot's own MultiplayerSpawner replication for already-spawned
@@ -147,10 +157,16 @@ func _on_server_disconnected() -> void:
 
 func kick_peer(id: int) -> void:
 	if multiplayer.is_server() and id != 1:
+		PacketTrace.sent("receive_kick", multiplayer.get_unique_id(), id, "reason=You were kicked by the host.", "_receive_kick") # TEMP DEBUG
 		_receive_kick.rpc_id(id, "You were kicked by the host.")
 
 @rpc("authority", "call_remote", "reliable")
 func _receive_kick(reason: String) -> void:
+	# TEMP DEBUG: "authority"+"call_remote" means this can only ever run on
+	# the actual target peer, never locally on the sender -- so unlike
+	# _register_session below, there's no guard-clause "ignored" path here;
+	# if this function runs at all, it's always a genuine network receive.
+	PacketTrace.received("receive_kick", multiplayer.get_remote_sender_id(), multiplayer.get_unique_id(), "reason=%s" % reason, "_receive_kick", "_receive_kick (handled, no guard)")
 	get_node("/root/WebRTCSignaler").stop()
 	multiplayer.multiplayer_peer = null
 	connected_peer_ids.clear()
@@ -184,8 +200,17 @@ func leave_game() -> void:
 ## otherwise (call_local fires this locally too, guarded below).
 @rpc("any_peer", "call_local", "reliable")
 func _register_session(session_id: String, preferred_role: int = 0) -> void:
+	# TEMP DEBUG: "call_local" means this always also runs locally on
+	# whoever called .rpc_id(1, ...), even though the RPC target was only
+	# peer 1 -- so a joining client sees this fire on its OWN machine too,
+	# not just the server's. get_remote_sender_id() returns 0 for that
+	# local invocation (it wasn't actually a received network packet at
+	# all), which is exactly the guard below relies on.
+	var is_local_call := multiplayer.get_remote_sender_id() == 0
 	if not multiplayer.is_server():
+		PacketTrace.received("register_session", ("LOCAL_CALL" if is_local_call else multiplayer.get_remote_sender_id()), multiplayer.get_unique_id(), "session_id=%s preferred_role=%d" % [session_id, preferred_role], "_register_session", "IGNORED (not server) -- expected for call_local's own-machine echo on a non-host peer")
 		return
+	PacketTrace.received("register_session", ("LOCAL_CALL(self)" if is_local_call else multiplayer.get_remote_sender_id()), multiplayer.get_unique_id(), "session_id=%s preferred_role=%d" % [session_id, preferred_role], "_register_session", "_register_session (handled)") # TEMP DEBUG
 	var sender_id := multiplayer.get_remote_sender_id()
 	var peer_id := sender_id if sender_id != 0 else 1
 	_peer_sessions[peer_id] = session_id
