@@ -5,8 +5,8 @@ signal room_error(msg: String)
 signal match_ready()
 signal disconnected()
 
-var ws := WebSocketPeer.new()
-var webrtc_mp := WebRTCMultiplayerPeer.new()
+var ws: WebSocketPeer = null
+var webrtc_mp: WebRTCMultiplayerPeer = null
 var webrtc_conn: WebRTCPeerConnection = null
 
 var is_host := false
@@ -24,24 +24,31 @@ func _ready():
 	http.request(http_url)
 
 func _process(_delta):
-	ws.poll()
-	var state = ws.get_ready_state()
-	
-	if state == WebSocketPeer.STATE_OPEN:
-		if _pending_action != "":
-			ws.put_packet(_pending_action.to_utf8_buffer())
-			_pending_action = ""
-			
-		while ws.get_available_packet_count() > 0:
-			var packet = ws.get_packet().get_string_from_utf8()
-			var msg = JSON.parse_string(packet)
-			if msg:
-				_handle_message(msg)
-	elif state == WebSocketPeer.STATE_CLOSED:
-		set_process(false)
-		disconnected.emit()
+	if ws != null:
+		ws.poll()
+		var state = ws.get_ready_state()
+		
+		if state == WebSocketPeer.STATE_OPEN:
+			if _pending_action != "":
+				ws.put_packet(_pending_action.to_utf8_buffer())
+				_pending_action = ""
+				
+			while ws.get_available_packet_count() > 0:
+				var packet = ws.get_packet().get_string_from_utf8()
+				var msg = JSON.parse_string(packet)
+				if msg:
+					_handle_message(msg)
+		elif state == WebSocketPeer.STATE_CLOSED:
+			set_process(false)
+			disconnected.emit()
+
+	if webrtc_conn != null:
+		webrtc_conn.poll()
 
 func start_host():
+	stop()
+	ws = WebSocketPeer.new()
+	webrtc_mp = WebRTCMultiplayerPeer.new()
 	is_host = true
 	webrtc_mp.create_server()
 	multiplayer.multiplayer_peer = webrtc_mp
@@ -51,6 +58,9 @@ func start_host():
 		set_process(true)
 
 func start_client(room_code: String):
+	stop()
+	ws = WebSocketPeer.new()
+	webrtc_mp = WebRTCMultiplayerPeer.new()
 	is_host = false
 	_pending_action = JSON.stringify({"type": "join_room", "room": room_code})
 	var err = ws.connect_to_url(server_url)
@@ -58,12 +68,26 @@ func start_client(room_code: String):
 		set_process(true)
 
 func start_quick_play():
-	# We don't know if we are host or client yet!
+	stop()
+	ws = WebSocketPeer.new()
+	webrtc_mp = WebRTCMultiplayerPeer.new()
 	is_host = false
 	_pending_action = JSON.stringify({"type": "quick_play"})
 	var err = ws.connect_to_url(server_url)
 	if err == OK:
 		set_process(true)
+
+func stop():
+	set_process(false)
+	if ws != null:
+		ws.close()
+		ws = null
+	if webrtc_mp != null:
+		webrtc_mp.close()
+		webrtc_mp = null
+	if webrtc_conn != null:
+		webrtc_conn.close()
+		webrtc_conn = null
 
 func _handle_message(msg: Dictionary):
 	if msg.type == "room_created":
