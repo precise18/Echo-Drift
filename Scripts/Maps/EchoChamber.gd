@@ -10,11 +10,11 @@ extends Node3D
 
 const HALF_SIZE := 15.0 # ground spans -15..15 on both X and Z
 
-const WALL_MATERIAL := preload("res://Materials/wall_material.tres")
-const FLOOR_MATERIAL := preload("res://Materials/echo_chamber_floor_material.tres")
-const PILLAR_MATERIAL := preload("res://Materials/rock_material.tres")
-const PANEL_MATERIAL := preload("res://Materials/mirror_panel_material.tres")
-const POOL_MATERIAL := preload("res://Materials/mirror_pool_material.tres")
+const WALL_MATERIAL: Material = preload("res://Materials/wall_material.tres")
+const FLOOR_MATERIAL: Material = preload("res://Materials/echo_chamber_floor_material.tres")
+const PILLAR_MATERIAL: Material = preload("res://Materials/rock_material.tres")
+const PANEL_MATERIAL: Material = preload("res://Materials/mirror_panel_material.tres")
+const POOL_MATERIAL: Material = preload("res://Materials/mirror_pool_material.tres")
 
 const ECHO_CYAN := Color(0.55, 0.95, 1.0) # matches EchoGhost's glow color
 
@@ -23,11 +23,11 @@ const ECHO_CYAN := Color(0.55, 0.95, 1.0) # matches EchoGhost's glow color
 # sourcing). Placed with MapKit.place_prop(), which adds no collision —
 # pure visual dressing, never a new hiding obstacle, so the hand-tuned
 # gameplay layout above is unaffected.
-const ROCK_SMALL := preload("res://Assets/Environment/NatureKit/rock_smallA.glb")
-const ROCK_LARGE := preload("res://Assets/Environment/NatureKit/rock_largeC.glb")
-const FLOWER_PURPLE := preload("res://Assets/Environment/NatureKit/flower_purpleA.glb")
-const FLOWER_YELLOW := preload("res://Assets/Environment/NatureKit/flower_yellowA.glb")
-const BUSH := preload("res://Assets/Environment/NatureKit/plant_bush.glb")
+const ROCK_SMALL: PackedScene = preload("res://Assets/Environment/NatureKit/rock_smallA.glb")
+const ROCK_LARGE: PackedScene = preload("res://Assets/Environment/NatureKit/rock_largeC.glb")
+const FLOWER_PURPLE: PackedScene = preload("res://Assets/Environment/NatureKit/flower_purpleA.glb")
+const FLOWER_YELLOW: PackedScene = preload("res://Assets/Environment/NatureKit/flower_yellowA.glb")
+const BUSH: PackedScene = preload("res://Assets/Environment/NatureKit/plant_bush.glb")
 
 
 func _ready() -> void:

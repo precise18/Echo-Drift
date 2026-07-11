@@ -13,8 +13,8 @@ const PITCH_MIN := deg_to_rad(-60)
 const PITCH_MAX := deg_to_rad(60)
 const FACE_TURN_SPEED := 12.0
 
-const HIDER_MATERIAL := preload("res://Materials/player_hider_material.tres")
-const HUNTER_MATERIAL := preload("res://Materials/player_hunter_material.tres")
+const HIDER_MATERIAL: Material = preload("res://Materials/player_hider_material.tres")
+const HUNTER_MATERIAL: Material = preload("res://Materials/player_hunter_material.tres")
 
 @onready var camera_pivot: Node3D = $CameraPivot
 @onready var spring_arm: SpringArm3D = $CameraPivot/SpringArm3D

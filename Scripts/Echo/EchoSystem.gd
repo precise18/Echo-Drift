@@ -12,7 +12,7 @@ class_name EchoSystem
 ## Main.tscn), then call set_target()/clear() as the round's Hider
 ## changes. Nothing else needs to know EchoRecorder or EchoGhost exist.
 
-const ECHO_GHOST_SCENE := preload("res://Scenes/Player/EchoGhost.tscn")
+const ECHO_GHOST_SCENE: PackedScene = preload("res://Scenes/Player/EchoGhost.tscn")
 
 ## One entry per simultaneous echo "shadow", in seconds-in-the-past.
 ## Defaults to a single echo to match this MVP's tuned difficulty —
