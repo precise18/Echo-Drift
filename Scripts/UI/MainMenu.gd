@@ -19,8 +19,6 @@ var _map_description: Label
 # Join screen state.
 var _ip_field: LineEdit
 var _join_button: Button
-var _join_status: Label
-var _room_code_label: Label
 
 
 func _ready() -> void:
@@ -41,6 +39,7 @@ func _ready() -> void:
 	_screens["browser"] = _build_browser_screen()
 	_screens["settings"] = _build_settings_screen()
 	_screens["credits"] = _build_credits_screen()
+	_screens["connecting"] = _build_connecting_screen()
 	for screen: Control in _screens.values():
 		add_child(screen)
 	_show_screen("title")
@@ -177,10 +176,6 @@ func _build_host_screen() -> Control:
 	content.add_child(_map_description)
 	content.add_child(_spacer(6))
 	content.add_child(UIKit.make_title("Your opponent joins with the Room Code", 13, UIKit.COLOR_MUTED))
-	
-	_room_code_label = UIKit.make_title("", 24, UIKit.COLOR_GOLD)
-	content.add_child(_room_code_label)
-
 	var start := UIKit.make_button("Start Hosting")
 	start.pressed.connect(_on_start_hosting_pressed)
 	content.add_child(start)
@@ -214,8 +209,6 @@ func _build_join_screen() -> Control:
 	_join_button.pressed.connect(_on_join_pressed)
 	content.add_child(_join_button)
 
-	_join_status = UIKit.make_title("", 14, UIKit.COLOR_GOLD)
-	content.add_child(_join_status)
 	content.add_child(_make_back_button())
 	return screen["root"]
 
@@ -256,8 +249,8 @@ func _refresh_browser() -> void:
 					for room in data:
 						var btn := UIKit.make_button("Join Room: " + room.get("code", "Unknown"))
 						btn.pressed.connect(func():
-							_show_screen("title")
-							_notice_label.text = "Connecting..."
+							_show_screen("connecting")
+							_connecting_label.text = "Connecting to room %s..." % room.get("code", "")
 							NetworkManager.join_game(room.get("code", ""))
 						)
 						_browser_list.add_child(btn)
@@ -294,6 +287,24 @@ func _build_credits_screen() -> Control:
 	content.add_child(_make_back_button())
 	return screen["root"]
 
+var _connecting_label: Label
+
+func _build_connecting_screen() -> Control:
+	var screen := _build_dialog_screen("CONNECTING")
+	var content: VBoxContainer = screen["content"]
+
+	_connecting_label = UIKit.make_title("Please wait...", 16, UIKit.COLOR_MUTED)
+	content.add_child(_connecting_label)
+	
+	var cancel := UIKit.make_button("Cancel")
+	cancel.pressed.connect(func():
+		NetworkManager.cancel_connection()
+		_show_screen("title")
+	)
+	content.add_child(cancel)
+	
+	return screen["root"]
+
 
 # ---------------------------------------------------------------------------
 # Actions
@@ -301,37 +312,41 @@ func _build_credits_screen() -> Control:
 
 func _on_start_hosting_pressed() -> void:
 	MapManager.set_selected_map(_selected_map_id)
-	_room_code_label.text = "Generating code..."
+	_show_screen("connecting")
+	_connecting_label.text = "Generating code..."
 	var err := NetworkManager.host_game()
 	if err != OK:
-		_notice_label.text = "Could not host (error %d)." % err
 		_show_screen("title")
+		_notice_label.text = "Could not host (error %d)." % err
 
 func _on_quick_play_pressed() -> void:
-	_notice_label.text = "Searching for public match..."
+	_show_screen("connecting")
+	_connecting_label.text = "Searching for public match..."
 	var err := NetworkManager.quick_play()
 	if err != OK:
+		_show_screen("title")
 		_notice_label.text = "Quick Play failed (error %d)." % err
 
 func _on_room_created(code: String) -> void:
 	DisplayServer.clipboard_set(code)
-	_room_code_label.text = "Room Code: " + code + "\n(Copied to clipboard!)\nWaiting for opponent..."
+	if _connecting_label != null:
+		_connecting_label.text = "Room Code: " + code + "\n(Copied to clipboard!)\nWaiting for opponent..."
 
 
 func _on_join_pressed() -> void:
 	var address := _ip_field.text.strip_edges().to_upper()
 	GameSettings.set_last_join_code(address)
-	_join_status.text = "Connecting to room %s..." % address
-	_join_button.disabled = true
+	_show_screen("connecting")
+	_connecting_label.text = "Connecting to room %s..." % address
 	var err := NetworkManager.join_game(address)
 	if err != OK:
-		_join_status.text = "Could not start connecting (error %d)." % err
-		_join_button.disabled = false
+		_show_screen("title")
+		_notice_label.text = "Could not start connecting (error %d)." % err
 
 
 func _on_connection_failed() -> void:
-	_join_status.text = "Connection failed. Check the IP and that the host is running."
-	_join_button.disabled = false
+	_show_screen("title")
+	_notice_label.text = "Connection failed. Check the Room Code and try again."
 
 
 # ---------------------------------------------------------------------------

@@ -90,6 +90,11 @@ func join_game(room_code: String) -> Error:
 	get_node("/root/WebRTCSignaler").start_client(room_code)
 	return OK
 
+func cancel_connection() -> void:
+	get_node("/root/WebRTCSignaler").stop()
+	multiplayer.multiplayer_peer = null
+	connected_peer_ids.clear()
+
 
 func _on_peer_connected(id: int) -> void:
 	if not connected_peer_ids.has(id):
