@@ -17,7 +17,9 @@ var _timer_label: Label
 var _lobby_panel: Control
 var _lobby_players_label: Label
 var _lobby_start_button: Button
+var _lobby_kick_button: Button
 var _lobby_waiting_label: Label
+var _lobby_room_code_label: Label
 
 # Round banner (fades on its own).
 var _banner: VBoxContainer
@@ -170,9 +172,19 @@ func _build_lobby_panel() -> void:
 	content.add_child(_lobby_players_label)
 	content.add_child(UIKit.make_paragraph("First to %d round wins takes the match.\nRoles swap every round — everyone hides, everyone hunts." % MatchStateManager.ROUNDS_TO_WIN, 14))
 
+	_lobby_room_code_label = UIKit.make_title("", 18, UIKit.COLOR_GOLD)
+	content.add_child(_lobby_room_code_label)
+
 	_lobby_start_button = UIKit.make_button("Start Match")
 	_lobby_start_button.pressed.connect(func() -> void: RoundManager.start_match())
 	content.add_child(_lobby_start_button)
+	
+	_lobby_kick_button = UIKit.make_button("Kick Player")
+	_lobby_kick_button.pressed.connect(func() -> void:
+		if NetworkManager.connected_peer_ids.size() > 1:
+			NetworkManager.kick_peer(NetworkManager.connected_peer_ids[1])
+	)
+	content.add_child(_lobby_kick_button)
 
 	_lobby_waiting_label = UIKit.make_title("", 14, UIKit.COLOR_MUTED)
 	content.add_child(_lobby_waiting_label)
@@ -370,15 +382,18 @@ func _refresh_lobby() -> void:
 		return
 	_last_lobby_player_count = player_count
 	_lobby_players_label.text = "Players: %d / 2" % player_count
+	var code = get_node("/root/WebRTCSignaler").current_room_code
+	_lobby_room_code_label.text = ("Room Code: " + code) if code != "" else ""
+
 	if multiplayer.multiplayer_peer != null and multiplayer.is_server():
 		_lobby_start_button.visible = true
 		_lobby_start_button.disabled = player_count < 2
+		_lobby_kick_button.visible = player_count >= 2
 		var wait_msg = "Waiting for a second player to join..."
-		if get_node("/root/WebRTCSignaler").current_room_code != "":
-			wait_msg = "Room Code: " + get_node("/root/WebRTCSignaler").current_room_code + "\nWaiting for a second player to join..."
 		_lobby_waiting_label.text = wait_msg if player_count < 2 else "Ready when you are."
 	else:
 		_lobby_start_button.visible = false
+		_lobby_kick_button.visible = false
 		_lobby_waiting_label.text = "Waiting for the host to start the match..."
 
 func _on_room_created(_code: String) -> void:

@@ -38,6 +38,7 @@ func _ready() -> void:
 	_screens["title"] = _build_title_screen()
 	_screens["host"] = _build_host_screen()
 	_screens["join"] = _build_join_screen()
+	_screens["browser"] = _build_browser_screen()
 	_screens["settings"] = _build_settings_screen()
 	_screens["credits"] = _build_credits_screen()
 	for screen: Control in _screens.values():
@@ -87,6 +88,7 @@ func _build_title_screen() -> Control:
 
 	var buttons := {
 		"Quick Play (Public)": func() -> void: _on_quick_play_pressed(),
+		"Server Browser": func() -> void: _show_screen("browser"),
 		"Host Private Game": func() -> void: _show_screen("host"),
 		"Join Private Game": func() -> void: _show_screen("join"),
 		"Settings": func() -> void: _show_screen("settings"),
@@ -208,6 +210,56 @@ func _build_join_screen() -> Control:
 	content.add_child(_join_status)
 	content.add_child(_make_back_button())
 	return screen["root"]
+
+var _browser_list: VBoxContainer
+
+func _build_browser_screen() -> Control:
+	var screen := _build_dialog_screen("PUBLIC SERVERS")
+	var content: VBoxContainer = screen["content"]
+	
+	_browser_list = VBoxContainer.new()
+	_browser_list.add_theme_constant_override("separation", 8)
+	content.add_child(_browser_list)
+
+	var refresh := UIKit.make_button("Refresh")
+	refresh.pressed.connect(_refresh_browser)
+	content.add_child(refresh)
+
+	content.add_child(_make_back_button())
+	return screen["root"]
+
+func _refresh_browser() -> void:
+	for child in _browser_list.get_children():
+		child.queue_free()
+	_browser_list.add_child(UIKit.make_title("Searching...", 16, UIKit.COLOR_MUTED))
+	
+	var http := HTTPRequest.new()
+	add_child(http)
+	http.request_completed.connect(func(result: int, response_code: int, headers: PackedStringArray, body: PackedByteArray):
+		for child in _browser_list.get_children():
+			child.queue_free()
+		
+		if result == HTTPRequest.RESULT_SUCCESS and response_code == 200:
+			var data = JSON.parse_string(body.get_string_from_utf8())
+			if data and typeof(data) == TYPE_ARRAY:
+				if data.is_empty():
+					_browser_list.add_child(UIKit.make_title("No public servers found.", 16, UIKit.COLOR_MUTED))
+				else:
+					for room in data:
+						var btn := UIKit.make_button("Join Room: " + room.get("code", "Unknown"))
+						btn.pressed.connect(func():
+							_show_screen("title")
+							_notice_label.text = "Connecting..."
+							NetworkManager.join_game(room.get("code", ""))
+						)
+						_browser_list.add_child(btn)
+			else:
+				_browser_list.add_child(UIKit.make_title("Failed to parse rooms.", 16, UIKit.COLOR_MUTED))
+		else:
+			_browser_list.add_child(UIKit.make_title("Cannot reach server.", 16, UIKit.COLOR_MUTED))
+		http.queue_free()
+	)
+	http.request(get_node("/root/WebRTCSignaler").server_url.replace("wss://", "https://").replace("ws://", "http://") + "/api/rooms")
 
 
 func _build_settings_screen() -> Control:

@@ -140,6 +140,20 @@ func _on_server_disconnected() -> void:
 	TransitionScreen.cover("Returning to menu...")
 	get_tree().change_scene_to_file(MENU_SCENE)
 
+func kick_peer(id: int) -> void:
+	if multiplayer.is_server() and id != 1:
+		_receive_kick.rpc_id(id, "You were kicked by the host.")
+
+@rpc("authority", "call_remote", "reliable")
+func _receive_kick(reason: String) -> void:
+	get_node("/root/WebRTCSignaler").stop()
+	multiplayer.multiplayer_peer = null
+	connected_peer_ids.clear()
+	RoundManager.reset_state()
+	last_disconnect_reason = reason
+	TransitionScreen.cover("Returning to menu...")
+	get_tree().change_scene_to_file(MENU_SCENE)
+
 
 ## Deliberately leaving (pause menu -> Leave Match), as opposed to losing
 ## the connection: close the peer cleanly, reset session state, and go
