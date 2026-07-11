@@ -10,6 +10,7 @@ var _current_screen := ""
 
 # Title screen notice (e.g. "Host disconnected." after being dropped).
 var _notice_label: Label
+var _server_stats_label: Label
 
 # Host screen state.
 var _selected_map_id: String = MapManager.DEFAULT_MAP_ID
@@ -44,7 +45,7 @@ func _ready() -> void:
 	_show_screen("title")
 
 	NetworkManager.connection_failed.connect(_on_connection_failed)
-	WebRTCSignaler.room_created.connect(_on_room_created)
+	get_node("/root/WebRTCSignaler").room_created.connect(_on_room_created)
 
 	# Explains why the player landed back here instead of silently
 	# dumping them at the menu — e.g. after the host disconnected. This
@@ -120,6 +121,25 @@ func _build_title_screen() -> Control:
 	vbox.add_child(_spacer(10))
 	_notice_label = UIKit.make_title("", 15, UIKit.COLOR_GOLD)
 	vbox.add_child(_notice_label)
+	
+	_server_stats_label = UIKit.make_title("Server Stats: Connecting...", 13, UIKit.COLOR_MUTED)
+	vbox.add_child(_server_stats_label)
+	
+	var http := HTTPRequest.new()
+	add_child(http)
+	http.request_completed.connect(func(result: int, response_code: int, headers: PackedStringArray, body: PackedByteArray):
+		if result == HTTPRequest.RESULT_SUCCESS and response_code == 200:
+			var data = JSON.parse_string(body.get_string_from_utf8())
+			if data and typeof(data) == TYPE_DICTIONARY:
+				_server_stats_label.text = "Public Server: %d Active Matches | %d Players Waiting" % [data.get("active_matches", 0), data.get("waiting_players", 0)]
+			else:
+				_server_stats_label.text = "Public Server: Online"
+		else:
+			_server_stats_label.text = "Public Server: Offline"
+		http.queue_free()
+	)
+	http.request(get_node("/root/WebRTCSignaler").server_url.replace("wss://", "https://").replace("ws://", "http://"))
+
 	vbox.add_child(UIKit.make_title("2-player LAN  •  built with Godot", 12, UIKit.COLOR_MUTED))
 	return root
 

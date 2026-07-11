@@ -62,7 +62,7 @@ func _on_map_ready(_map_id: String) -> void:
 ## (HUD -> RoundManager.start_match). See UI_GUIDE.md.
 func _on_peer_connected_server(id: int) -> void:
 	_spawn_player(id)
-	if WebRTCSignaler.is_quick_play and NetworkManager.connected_peer_ids.size() == 2 and not RoundManager.round_active:
+	if get_node("/root/WebRTCSignaler").is_quick_play and NetworkManager.connected_peer_ids.size() == 2 and not RoundManager.round_active:
 		RoundManager.start_match()
 
 

@@ -55,17 +55,17 @@ func _ready() -> void:
 	multiplayer.connected_to_server.connect(_on_connected_to_server)
 	multiplayer.connection_failed.connect(_on_connection_failed)
 	multiplayer.server_disconnected.connect(_on_server_disconnected)
-	WebRTCSignaler.match_ready.connect(_on_webrtc_match_ready)
+	get_node("/root/WebRTCSignaler").match_ready.connect(_on_webrtc_match_ready)
 	randomize()
 	local_session_id = "%d-%d" % [Time.get_ticks_usec(), randi()]
 
 func _on_webrtc_match_ready() -> void:
-	if not WebRTCSignaler.is_host:
+	if not get_node("/root/WebRTCSignaler").is_host:
 		pass # We wait for connected_to_server instead for clients
 
 
 func host_game() -> Error:
-	WebRTCSignaler.start_host()
+	get_node("/root/WebRTCSignaler").start_host()
 	enter_game_as_host()
 	return OK
 
@@ -76,7 +76,7 @@ func enter_game_as_host() -> void:
 	get_tree().change_scene_to_file(GAME_SCENE)
 
 func quick_play() -> Error:
-	WebRTCSignaler.start_quick_play()
+	get_node("/root/WebRTCSignaler").start_quick_play()
 	return OK
 
 
@@ -87,7 +87,7 @@ func quick_play() -> Error:
 func join_game(room_code: String) -> Error:
 	if room_code.is_empty():
 		return ERR_INVALID_PARAMETER
-	WebRTCSignaler.start_client(room_code)
+	get_node("/root/WebRTCSignaler").start_client(room_code)
 	return OK
 
 

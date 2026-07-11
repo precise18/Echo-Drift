@@ -77,7 +77,7 @@ func _ready() -> void:
 	MatchStateManager.phase_changed.connect(_on_phase_changed)
 	NetworkManager.reconnect_grace_started.connect(_on_reconnect_grace_started)
 	NetworkManager.reconnect_grace_ended.connect(_on_reconnect_grace_ended)
-	WebRTCSignaler.room_created.connect(_on_room_created)
+	get_node("/root/WebRTCSignaler").room_created.connect(_on_room_created)
 
 	_apply_phase(MatchStateManager.phase)
 	_update_mouse()
@@ -374,8 +374,8 @@ func _refresh_lobby() -> void:
 		_lobby_start_button.visible = true
 		_lobby_start_button.disabled = player_count < 2
 		var wait_msg = "Waiting for a second player to join..."
-		if WebRTCSignaler.current_room_code != "":
-			wait_msg = "Room Code: " + WebRTCSignaler.current_room_code + "\nWaiting for a second player to join..."
+		if get_node("/root/WebRTCSignaler").current_room_code != "":
+			wait_msg = "Room Code: " + get_node("/root/WebRTCSignaler").current_room_code + "\nWaiting for a second player to join..."
 		_lobby_waiting_label.text = wait_msg if player_count < 2 else "Ready when you are."
 	else:
 		_lobby_start_button.visible = false
